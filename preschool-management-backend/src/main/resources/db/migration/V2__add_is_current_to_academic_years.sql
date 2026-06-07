@@ -1,0 +1,1 @@
+ALTER TABLE academic_years ADD COLUMN is_current BOOLEAN NOT NULL DEFAULT FALSE;

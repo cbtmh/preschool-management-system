@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS token_blacklist (
+    id BIGSERIAL PRIMARY KEY,
+    token VARCHAR(1000) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL
+);

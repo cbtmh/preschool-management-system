@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # 1. Database Service (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: preschool_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: preschool_db1
+    ports:
+      # Map cổng máy chủ : cổng container
+      # Giữ cổng 5454 để bạn dùng DataGrip/DBeaver kết nối từ xa
+      - "5454:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Backend Service (Spring Boot)
+  backend:
+    build: . # Build file Dockerfile ở cùng thư mục
+    container_name: preschool_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+volumes:
+  # Lưu trữ dữ liệu DB vĩnh viễn dù có tắt/xóa container
+  postgres_data:

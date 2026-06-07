@@ -1,0 +1,26 @@
+# Node / Frontend / Mobile
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+.expo/
+.DS_Store
+
+# Backend (Spring Boot)
+target/
+*.jar
+*.war
+.settings/
+.classpath
+.project
+.idea/
+*.iml
+application-*.yml
+!application.yml
+!application-dev.yml
+
+# IDE / OS
+.vscode/
+uploads/
