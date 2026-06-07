@@ -24,3 +24,5 @@ application-*.yml
 # IDE / OS
 .vscode/
 uploads/
+skills/
+AGENTS.md
