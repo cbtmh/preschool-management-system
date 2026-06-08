@@ -31,7 +31,7 @@ public class ParentServiceImpl implements ParentService {
         // Bước 1: Gọi UserService để tạo tài khoản User trước
         // Logic bên trong UserService đã check trùng username (số điện thoại) rồi
         User savedUser = userService.createNewUser(
-                request.getUsername(), 
+                request.getPhone(), 
                 request.getEmail(),
                 Role.PARENT
         );
@@ -56,6 +56,17 @@ public class ParentServiceImpl implements ParentService {
         parent.setFullName(request.getFullName());
         parent.setAddress(request.getAddress());
 
+        User user = parent.getUser();
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email này đã được đăng ký tài khoản");
+            }
+            user.setEmail(request.getEmail());
+        } else {
+            user.setEmail(null);
+        }
+
+        userRepository.save(user); // Lưu sự thay đổi của User (email) vào DB
         Parent updatedParent = parentRepository.save(parent);
         return mapToResponse(updatedParent);
     }
@@ -97,6 +108,7 @@ public class ParentServiceImpl implements ParentService {
                 .id(entity.getId())
                 .userId(entity.getUser().getId())
                 .username(entity.getUser().getUsername())
+                .email(entity.getUser().getEmail())
                 .fullName(entity.getFullName())
                 .address(entity.getAddress())
                 .childrenNames(childrenNames)

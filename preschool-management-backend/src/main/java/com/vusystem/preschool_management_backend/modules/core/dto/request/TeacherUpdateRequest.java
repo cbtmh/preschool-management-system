@@ -15,6 +15,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class TeacherUpdateRequest {
 
+    @jakarta.validation.constraints.Email(message = "Email không hợp lệ")
+    private String email;
+
     @NotBlank(message = "Họ và tên không được để trống")
     private String fullName;
 

@@ -242,6 +242,7 @@ public class ChildServiceImpl implements ChildService {
                     String parentName = getCellValueAsString(row.getCell(3));
                     String parentPhone = getCellValueAsString(row.getCell(4));
                     String parentAddress = getCellValueAsString(row.getCell(5));
+                    String parentEmail = getCellValueAsString(row.getCell(6));
 
                     if (childName.isEmpty() || parentPhone.isEmpty()) {
                         continue; // Skip invalid rows
@@ -256,7 +257,8 @@ public class ChildServiceImpl implements ChildService {
                         // User DOES NOT exist
                         User newUser;
                         if (!userService.existsByUsername(parentPhone)) {
-                            newUser = userService.createNewUser(parentPhone, null, Role.PARENT);
+                            String emailToSave = parentEmail.isEmpty() ? null : parentEmail;
+                            newUser = userService.createNewUser(parentPhone, emailToSave, Role.PARENT);
                         } else {
                             newUser = userService.findByUsername(parentPhone).get();
                         }

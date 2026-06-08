@@ -65,6 +65,17 @@ public class TeacherServiceImpl implements TeacherService {
         existingTeacher.setGender(parseGender(request.getGender())); // Dùng hàm helper an toàn
         existingTeacher.setAddress(request.getAddress());
 
+        User user = existingTeacher.getUser();
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email này đã được đăng ký tài khoản");
+            }
+            user.setEmail(request.getEmail());
+        } else {
+            user.setEmail(null);
+        }
+        
+        userRepository.save(user); // Lưu sự thay đổi của User (email) vào DB
         Teacher updatedTeacher = teacherRepository.save(existingTeacher);
         return mapToResponse(updatedTeacher);
     }
@@ -129,6 +140,7 @@ public class TeacherServiceImpl implements TeacherService {
                 .id(entity.getId())
                 .userId(entity.getUser().getId())
                 .username(entity.getUser().getUsername()) 
+                .email(entity.getUser().getEmail())
                 .fullName(entity.getFullName())
                 .dob(entity.getDob())
                 .gender(entity.getGender() != null ? entity.getGender().name() : null)

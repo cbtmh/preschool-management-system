@@ -16,6 +16,7 @@ public class TeacherResponse {
 
     // Thông tin tài khoản
     private String username; // Số điện thoại
+    private String email;
 
     // Thông tin hồ sơ
     private String fullName;

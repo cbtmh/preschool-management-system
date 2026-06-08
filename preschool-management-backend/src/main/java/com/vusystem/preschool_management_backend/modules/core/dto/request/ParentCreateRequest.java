@@ -14,10 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ParentCreateRequest {
 
-    // --- Thông tin bắt buộc để tạo User ---
     @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không đúng định dạng")
-    private String username;
+    private String phone;
 
     @jakarta.validation.constraints.Email(message = "Email không hợp lệ")
     private String email;
