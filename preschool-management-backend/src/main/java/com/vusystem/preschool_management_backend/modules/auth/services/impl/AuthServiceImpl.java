@@ -181,12 +181,14 @@ public class AuthServiceImpl implements AuthService {
                         return; // Already blacklisted
                 }
                 
-                // Xoá Refresh Token của user hiện tại
+                // Xoá Refresh Token và Push Token của user hiện tại
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication != null && authentication.getName() != null) {
                     User user = userRepository.findByUsernameOrEmail(authentication.getName(), authentication.getName()).orElse(null);
                     if (user != null) {
                         refreshTokenRepository.deleteByUser_Id(user.getId());
+                        user.setDeviceToken(null);
+                        userRepository.save(user);
                     }
                 }
 
