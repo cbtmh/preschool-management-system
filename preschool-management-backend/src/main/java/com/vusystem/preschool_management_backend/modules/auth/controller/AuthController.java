@@ -112,4 +112,17 @@ public class AuthController {
                 .build();
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/push-token")
+    public ResponseEntity<ApiResponse> updatePushToken(@Valid @RequestBody com.vusystem.preschool_management_backend.modules.auth.dto.request.PushTokenRequest request) {
+        MeResponse me = authService.getMe();
+        userService.updatePushToken(me.getUserId(), request.getToken());
+        
+        ApiResponse response = ApiResponse.builder()
+                .status(200)
+                .message("Cập nhật push token thành công")
+                .data(null)
+                .build();
+        return ResponseEntity.ok(response);
+    }
 }

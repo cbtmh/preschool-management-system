@@ -24,8 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.vusystem.preschool_management_backend.common.entity.user.User;
@@ -40,6 +42,7 @@ public class NotificationService {
     private final ClassTeacherRepository classTeacherRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ExpoPushService expoPushService;
 
     @Transactional
     public void sendNotification(SendNotificationRequest request, Long senderId) {
@@ -99,6 +102,22 @@ public class NotificationService {
         if (!notificationRecipients.isEmpty()) {
             notificationRecipientRepository.saveAll(notificationRecipients);
         }
+
+        // Send Push Notifications
+        List<String> tokens = recipients.stream()
+                .map(User::getDeviceToken)
+                .filter(token -> token != null && !token.isEmpty())
+                .collect(Collectors.toList());
+
+        if (!tokens.isEmpty()) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("notificationId", notification.getId().toString());
+            if (notification.getReferenceType() != null) {
+                data.put("referenceType", notification.getReferenceType());
+                data.put("referenceId", notification.getReferenceId() != null ? notification.getReferenceId().toString() : null);
+            }
+            expoPushService.sendPushNotifications(tokens, notification.getTitle(), notification.getContent(), data);
+        }
     }
 
     @Transactional
@@ -130,6 +149,17 @@ public class NotificationService {
                 .isRead(false)
                 .build();
         notificationRecipientRepository.save(notificationRecipient);
+
+        // Send push notification
+        if (recipient.getDeviceToken() != null && !recipient.getDeviceToken().isEmpty()) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("notificationId", notification.getId().toString());
+            if (referenceType != null) {
+                data.put("referenceType", referenceType);
+                data.put("referenceId", referenceId != null ? referenceId.toString() : null);
+            }
+            expoPushService.sendPushNotifications(List.of(recipient.getDeviceToken()), title, content, data);
+        }
     }
 
 

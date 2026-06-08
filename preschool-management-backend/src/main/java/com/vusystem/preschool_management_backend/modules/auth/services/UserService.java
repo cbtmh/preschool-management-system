@@ -12,4 +12,5 @@ public interface UserService {
     User findById(Long id);
     void resendPassword(Long userId);
     void forgotPassword(String username);
+    void updatePushToken(Long userId, String token);
 }

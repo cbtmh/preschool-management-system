@@ -44,6 +44,9 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Boolean requiresPasswordChange = false;
 
+    @Column(name = "device_token", length = 255)
+    private String deviceToken;
+
 
     // Nếu User là Teacher, truy xuất thông tin Teacher
     // Dùng FetchType.LAZY để tối ưu hiệu suất, không query nếu không cần

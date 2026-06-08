@@ -128,4 +128,12 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản với số điện thoại này"));
         resendPassword(user.getId());
     }
+
+    @Override
+    @Transactional
+    public void updatePushToken(Long userId, String token) {
+        User user = findById(userId);
+        user.setDeviceToken(token);
+        userRepository.save(user);
+    }
 }
