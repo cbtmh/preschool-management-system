@@ -13,13 +13,18 @@ import java.util.Optional;
 
 import java.util.Random;
 import com.vusystem.preschool_management_backend.modules.auth.services.SmsService;
+import com.vusystem.preschool_management_backend.modules.communication.services.MailService;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SmsService smsService;
+    private final MailService mailService;
     private static final String ALPHANUMERIC_STRING = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     @Override
@@ -53,7 +58,17 @@ public class UserServiceImpl implements UserService {
         User savedUser = userRepository.save(newUser);
         
         // Send SMS
-        smsService.sendTemporaryPassword(username, generatedPassword);
+        try {
+            smsService.sendTemporaryPassword(username, generatedPassword);
+        } catch (Exception e) {
+            log.error("Failed to send SMS to {}: {}", username, e.getMessage());
+        }
+
+        // Send Email if available
+        if (savedUser.getEmail() != null && !savedUser.getEmail().isEmpty()) {
+            String roleName = role == Role.TEACHER ? "Giáo viên" : (role == Role.PARENT ? "Phụ huynh" : "Người dùng");
+            mailService.sendAccountCreationEmail(savedUser.getEmail(), username, generatedPassword, roleName);
+        }
         
         return savedUser;
     }
@@ -93,7 +108,17 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         // Send SMS
-        smsService.sendTemporaryPassword(user.getUsername(), generatedPassword);
+        try {
+            smsService.sendTemporaryPassword(user.getUsername(), generatedPassword);
+        } catch (Exception e) {
+            log.error("Failed to send SMS to {}: {}", user.getUsername(), e.getMessage());
+        }
+
+        // Send Email if available
+        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+            String roleName = user.getRole() == Role.TEACHER ? "Giáo viên" : (user.getRole() == Role.PARENT ? "Phụ huynh" : "Người dùng");
+            mailService.sendAccountCreationEmail(user.getEmail(), user.getUsername(), generatedPassword, roleName);
+        }
     }
 
     @Override
