@@ -57,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
                                                 request.getPassword()));
 
                 // 2. Tìm user (đã chắc chắn đúng thông tin sau khi pass bước 1)
-                User user = userRepository.findByUsername(request.getUsername())
+                User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
                 // 3. Kiểm tra trạng thái hoạt động (Nếu làm chuẩn thì có thể đưa vào
@@ -92,6 +92,7 @@ public class AuthServiceImpl implements AuthService {
                                 .refreshToken(refreshTokenStr)
                                 .userId(user.getId())
                                 .username(user.getUsername())
+                                .email(user.getEmail())
                                 .role(user.getRole())
                                 .requiresPasswordChange(user.getRequiresPasswordChange())
                                 .build();
@@ -105,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
                 String username = authentication.getName(); // Đây chính là số điện thoại
 
                 // 2. Query DB để lấy thực thể User
-                User user = userRepository.findByUsername(username)
+                User user = userRepository.findByUsernameOrEmail(username, username)
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
                 // 3. Xây dựng thông tin Profile tùy theo Role
@@ -145,6 +146,7 @@ public class AuthServiceImpl implements AuthService {
                 return MeResponse.builder()
                                 .userId(user.getId())
                                 .username(user.getUsername())
+                                .email(user.getEmail())
                                 .role(user.getRole())
                                 .profile(profile)
                                 .requiresPasswordChange(user.getRequiresPasswordChange())
@@ -158,7 +160,7 @@ public class AuthServiceImpl implements AuthService {
                 String username = authentication.getName();
 
                 // Tìm user trong Database
-                User user = userRepository.findByUsername(username)
+                User user = userRepository.findByUsernameOrEmail(username, username)
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
                 // Kiểm tra mật khẩu cũ có khớp với mật khẩu đã hash trong DB không
@@ -182,7 +184,7 @@ public class AuthServiceImpl implements AuthService {
                 // Xoá Refresh Token của user hiện tại
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication != null && authentication.getName() != null) {
-                    User user = userRepository.findByUsername(authentication.getName()).orElse(null);
+                    User user = userRepository.findByUsernameOrEmail(authentication.getName(), authentication.getName()).orElse(null);
                     if (user != null) {
                         refreshTokenRepository.deleteByUser_Id(user.getId());
                     }

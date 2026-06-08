@@ -15,14 +15,14 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByUsername(username)
+        return userRepository.findByUsernameOrEmail(username, username)
             .map(user -> org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUsername())
                     .password(user.getPasswordHash())
                     .authorities("ROLE_" + user.getRole().name())
                     .disabled(!user.getIsActive())
                     .build())
-            .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản với SĐT: " + username));
+            .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản với thông tin đăng nhập: " + username));
     }
 }
 

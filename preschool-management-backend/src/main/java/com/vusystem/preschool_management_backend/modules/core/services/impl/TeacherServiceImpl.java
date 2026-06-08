@@ -38,6 +38,7 @@ public class TeacherServiceImpl implements TeacherService {
     public TeacherResponse createTeacher(TeacherCreateRequest request) {
         User savedUser = userService.createNewUser(
                 request.getPhone(),
+                request.getEmail(),
                 Role.TEACHER
         );
 

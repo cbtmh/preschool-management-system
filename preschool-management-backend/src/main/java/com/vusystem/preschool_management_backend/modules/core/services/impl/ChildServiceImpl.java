@@ -256,7 +256,7 @@ public class ChildServiceImpl implements ChildService {
                         // User DOES NOT exist
                         User newUser;
                         if (!userService.existsByUsername(parentPhone)) {
-                            newUser = userService.createNewUser(parentPhone, Role.PARENT);
+                            newUser = userService.createNewUser(parentPhone, null, Role.PARENT);
                         } else {
                             newUser = userService.findByUsername(parentPhone).get();
                         }

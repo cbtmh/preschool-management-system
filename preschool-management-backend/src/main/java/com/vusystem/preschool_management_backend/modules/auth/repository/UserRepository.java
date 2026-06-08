@@ -12,7 +12,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByUsernameOrEmail(String username, String email);
+
     boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
 
     List<User> findByRole(com.vusystem.preschool_management_backend.common.entity.enums.Role role);
     

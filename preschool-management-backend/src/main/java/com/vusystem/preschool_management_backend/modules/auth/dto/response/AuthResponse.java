@@ -11,6 +11,7 @@ public class AuthResponse {
     private String refreshToken;
     private Long userId;
     private String username;  // Số điện thoại
+    private String email;
     private Role role;        
     private Boolean requiresPasswordChange;
 }

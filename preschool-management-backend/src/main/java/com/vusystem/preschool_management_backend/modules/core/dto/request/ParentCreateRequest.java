@@ -19,6 +19,9 @@ public class ParentCreateRequest {
     @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không đúng định dạng")
     private String username;
 
+    @jakarta.validation.constraints.Email(message = "Email không hợp lệ")
+    private String email;
+
     // --- Thông tin hồ sơ Phụ huynh ---
     @NotBlank(message = "Họ và tên không được để trống")
     @Size(max = 100, message = "Họ và tên không được vượt quá 100 ký tự")

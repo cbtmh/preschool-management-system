@@ -24,9 +24,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User createNewUser(String username, Role role) {
+    public User createNewUser(String username, String email, Role role) {
         if (existsByUsername(username)) {
             throw new RuntimeException("Số điện thoại này đã được đăng ký tài khoản");
+        }
+        if (email != null && !email.trim().isEmpty() && userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email này đã được đăng ký tài khoản");
         }
 
         // Generate a random 6-character alphanumeric password
@@ -40,6 +43,7 @@ public class UserServiceImpl implements UserService {
 
         User newUser = User.builder()
                 .username(username)
+                .email(email != null && !email.trim().isEmpty() ? email : null)
                 .passwordHash(passwordEncoder.encode(generatedPassword))
                 .role(role)
                 .isActive(true)

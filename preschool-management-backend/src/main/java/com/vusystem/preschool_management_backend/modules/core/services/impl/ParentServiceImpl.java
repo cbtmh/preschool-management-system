@@ -32,6 +32,7 @@ public class ParentServiceImpl implements ParentService {
         // Logic bên trong UserService đã check trùng username (số điện thoại) rồi
         User savedUser = userService.createNewUser(
                 request.getUsername(), 
+                request.getEmail(),
                 Role.PARENT
         );
 

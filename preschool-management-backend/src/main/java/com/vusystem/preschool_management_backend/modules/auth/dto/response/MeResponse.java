@@ -9,6 +9,7 @@ import lombok.Data;
 public class MeResponse {
     private Long userId;
     private String username;
+    private String email;
     private Role role;
     private Object profile; // Linh hoạt trả về TeacherDto hoặc ParentDto
     private Boolean requiresPasswordChange;
