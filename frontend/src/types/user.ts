@@ -4,6 +4,7 @@ export interface TeacherCreateRequest {
   fullName: string;
   dob: string; // YYYY-MM-DD
   gender: string; // MALE, FEMALE, OTHER
+  email?: string;
   address?: string;
 }
 
@@ -11,6 +12,7 @@ export interface TeacherUpdateRequest {
   fullName: string;
   dob: string;
   gender: string;
+  email?: string;
   address?: string;
 }
 
@@ -21,6 +23,7 @@ export interface TeacherResponse {
   fullName: string;
   dob: string;
   gender: string;
+  email?: string;
   address: string;
   assignedClasses?: string[];
 }
@@ -29,11 +32,13 @@ export interface TeacherResponse {
 export interface ParentCreateRequest {
   phone: string; // Used as username
   fullName: string;
+  email?: string;
   address?: string;
 }
 
 export interface ParentUpdateRequest {
   fullName: string;
+  email?: string;
   address?: string;
 }
 
@@ -42,6 +47,7 @@ export interface ParentResponse {
   userId: number;
   username: string;
   fullName: string;
+  email?: string;
   address: string;
   childrenNames?: string[];
 }

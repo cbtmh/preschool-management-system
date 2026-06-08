@@ -56,6 +56,7 @@ const createSchema = z.object({
   fullName: z.string().min(1, "Họ và tên là bắt buộc"),
   dob: z.string().min(1, "Ngày sinh là bắt buộc"),
   gender: z.string().min(1, "Giới tính là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   address: z.string().optional(),
 });
 
@@ -63,6 +64,7 @@ const updateSchema = z.object({
   fullName: z.string().min(1, "Họ và tên là bắt buộc"),
   dob: z.string().min(1, "Ngày sinh là bắt buộc"),
   gender: z.string().min(1, "Giới tính là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   address: z.string().optional(),
 });
 
@@ -97,6 +99,7 @@ const Teachers = () => {
     defaultValues: {
       phone: "",
       fullName: "",
+      email: "",
       dob: "",
       gender: "",
       address: "",
@@ -125,6 +128,7 @@ const Teachers = () => {
       form.reset({
         phone: "", // Ignored in update schema
         fullName: teacher.fullName,
+        email: teacher.email || "",
         dob: teacher.dob,
         gender: teacher.gender,
         address: teacher.address || "",
@@ -134,6 +138,7 @@ const Teachers = () => {
       form.reset({
         phone: "",
         fullName: "",
+        email: "",
         dob: "",
         gender: "",
         address: "",
@@ -147,13 +152,17 @@ const Teachers = () => {
       if (editingId) {
         await userService.updateTeacher(editingId, {
           fullName: values.fullName,
+          email: values.email || undefined,
           dob: values.dob,
           gender: values.gender,
           address: values.address,
         });
         toast.success('Cập nhật giáo viên thành công');
       } else {
-        await userService.createTeacher(values);
+        await userService.createTeacher({
+          ...values,
+          email: values.email || undefined,
+        });
         toast.success('Thêm mới giáo viên thành công');
       }
       setIsDialogOpen(false);
@@ -215,6 +224,7 @@ const Teachers = () => {
               <TableHead>Mã GV</TableHead>
               <TableHead>Họ và tên</TableHead>
               <TableHead>Số điện thoại</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Giới tính</TableHead>
               <TableHead>Ngày sinh</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
@@ -235,6 +245,7 @@ const Teachers = () => {
                   <TableCell className="font-medium">GV{teacher.id.toString().padStart(3, '0')}</TableCell>
                   <TableCell>{teacher.fullName}</TableCell>
                   <TableCell>{teacher.username}</TableCell>
+                  <TableCell>{teacher.email || <span className="text-gray-400 italic">Chưa có</span>}</TableCell>
                   <TableCell>{teacher.gender === 'MALE' ? 'Nam' : teacher.gender === 'FEMALE' ? 'Nữ' : 'Khác'}</TableCell>
                   <TableCell>{teacher.dob}</TableCell>
                   <TableCell className="text-right">
@@ -318,6 +329,20 @@ const Teachers = () => {
                     <FormLabel>Họ và tên</FormLabel>
                     <FormControl>
                       <Input placeholder="VD: Nguyễn Thị A" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Tùy chọn)</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="VD: email@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

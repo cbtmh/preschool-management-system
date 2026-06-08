@@ -78,7 +78,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
         <div className="space-y-4 py-4">
           <div className="flex flex-col gap-2">
             <p className="text-sm text-gray-500">
-              Vui lòng tải xuống file mẫu, điền dữ liệu theo đúng định dạng các cột (Tên Học Sinh | Ngày Sinh | Giới Tính | Tên Phụ Huynh | SĐT Phụ Huynh | Địa Chỉ) và tải lên lại. Không thêm bớt các cột trong file mẫu.
+              Vui lòng tải xuống file mẫu, điền dữ liệu theo đúng định dạng các cột (Tên Học Sinh | Ngày Sinh | Giới Tính | Tên Phụ Huynh | SĐT Phụ Huynh | Địa Chỉ | Email) và tải lên lại. Không thêm bớt các cột trong file mẫu.
             </p>
             <Button
               type="button"

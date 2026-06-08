@@ -47,11 +47,13 @@ import {
 const createSchema = z.object({
   phone: z.string().min(10, "Số điện thoại không hợp lệ"),
   fullName: z.string().min(1, "Họ và tên là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   address: z.string().optional(),
 });
 
 const updateSchema = z.object({
   fullName: z.string().min(1, "Họ và tên là bắt buộc"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   address: z.string().optional(),
 });
 
@@ -87,6 +89,7 @@ const Parents = () => {
     defaultValues: {
       phone: "",
       fullName: "",
+      email: "",
       address: "",
     },
   });
@@ -114,6 +117,7 @@ const Parents = () => {
       form.reset({
         phone: "", // Ignored in update schema
         fullName: parent.fullName,
+        email: parent.email || "",
         address: parent.address || "",
       });
     } else {
@@ -122,6 +126,7 @@ const Parents = () => {
       form.reset({
         phone: "",
         fullName: "",
+        email: "",
         address: "",
       });
     }
@@ -133,11 +138,15 @@ const Parents = () => {
       if (editingId) {
         await userService.updateParent(editingId, {
           fullName: values.fullName,
+          email: values.email || undefined,
           address: values.address,
         });
         toast.success('Cập nhật phụ huynh thành công');
       } else {
-        await userService.createParent(values);
+        await userService.createParent({
+          ...values,
+          email: values.email || undefined,
+        });
         toast.success('Thêm mới phụ huynh thành công');
       }
       setIsDialogOpen(false);
@@ -199,6 +208,7 @@ const Parents = () => {
               <TableHead>Mã PH</TableHead>
               <TableHead>Họ và tên</TableHead>
               <TableHead>Số điện thoại</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Phụ huynh của bé</TableHead>
               <TableHead>Địa chỉ</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
@@ -219,6 +229,7 @@ const Parents = () => {
                   <TableCell className="font-medium">PH{parent.id.toString().padStart(3, '0')}</TableCell>
                   <TableCell>{parent.fullName}</TableCell>
                   <TableCell>{parent.username}</TableCell>
+                  <TableCell>{parent.email || <span className="text-gray-400 italic">Chưa có</span>}</TableCell>
                   <TableCell>
                     {parent.childrenNames && parent.childrenNames.length > 0 
                       ? <span className="font-medium text-blue-600">{parent.childrenNames.join(', ')}</span>
@@ -306,6 +317,20 @@ const Parents = () => {
                     <FormLabel>Họ và tên</FormLabel>
                     <FormControl>
                       <Input placeholder="VD: Trần Văn B" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Tùy chọn)</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="VD: email@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
