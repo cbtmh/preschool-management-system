@@ -15,7 +15,7 @@ public interface AcademicYearRepository extends JpaRepository<AcademicYear, Long
 
     Optional<AcademicYear> findByIsCurrentTrue();
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE AcademicYear a SET a.isCurrent = false WHERE a.isCurrent = true")
     void resetAllIsCurrentFlags();
 }
