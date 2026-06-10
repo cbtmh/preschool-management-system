@@ -32,7 +32,7 @@ export default function ForgotPasswordScreen() {
       
       Alert.alert(
         'Thành công',
-        response.message || 'Mật khẩu mới đã được gửi đến số điện thoại của bạn',
+        response.message || 'Vui lòng kiểm tra email của bạn để lấy mật khẩu mới.',
         [{ text: 'Về trang đăng nhập', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
@@ -67,7 +67,7 @@ export default function ForgotPasswordScreen() {
           
           <Text style={styles.title}>Quên mật khẩu?</Text>
           <Text style={styles.subtitle}>
-            Vui lòng nhập số điện thoại đã đăng ký. Chúng tôi sẽ gửi mật khẩu mới qua SMS cho bạn.
+            Vui lòng nhập số điện thoại đã đăng ký. Chúng tôi sẽ gửi mật khẩu mới qua email của bạn.
           </Text>
 
           <View style={styles.inputContainer}>
