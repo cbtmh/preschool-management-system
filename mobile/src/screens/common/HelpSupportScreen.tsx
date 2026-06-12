@@ -23,7 +23,6 @@ export default function HelpSupportScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Tự phục vụ */}
         <Text style={styles.sectionTitle}>TỰ TÌM HIỂU</Text>
         <View style={styles.card}>
           <SettingItem 
@@ -40,7 +39,6 @@ export default function HelpSupportScreen() {
           />
         </View>
 
-        {/* Liên hệ trực tiếp */}
         <Text style={styles.sectionTitle}>LIÊN HỆ VỚI CHÚNG TÔI</Text>
         <View style={styles.card}>
           <SettingItem 
@@ -76,7 +74,6 @@ export default function HelpSupportScreen() {
           />
         </View>
 
-        {/* Info */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Ứng dụng Quản lý Mầm non</Text>
           <Text style={styles.footerText}>Phiên bản 1.0.0</Text>

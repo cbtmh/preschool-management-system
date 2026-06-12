@@ -28,63 +28,50 @@ public class ClassTeacherServiceImpl implements ClassTeacherService {
     private final TeacherRepository teacherRepository;
 
     @Override
-    @Transactional // Bắt buộc phải có để đảm bảo nếu lỗi giữa chừng thì rollback lại hết
+    @Transactional
     public ClassTeacherResponse assignTeachersToClass(ClassTeacherRequest request) {
-        Long classId = request.getClassId();
-        
-        // 1. Kiểm tra Lớp học có tồn tại không
-        SchoolClass schoolClass = schoolClassRepository.findById(classId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + classId));
+        SchoolClass schoolClass = schoolClassRepository.findById(request.getClassId())
+                .orElseThrow(() -> new RuntimeException("không tìm thấy lớp học."));
 
-        // 2. Xóa toàn bộ giáo viên cũ đang được phân công ở lớp này
-        classTeacherRepository.deleteBySchoolClassId(classId);
+        classTeacherRepository.deleteBySchoolClassId(request.getClassId());
 
-        // 3. Phân công danh sách giáo viên mới
         List<ClassTeacher> newAssignments = new ArrayList<>();
         
         for (Long teacherId : request.getTeacherIds()) {
-            // Kiểm tra từng giáo viên xem có tồn tại không
             Teacher teacher = teacherRepository.findById(teacherId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy giáo viên với ID: " + teacherId));
+                    .orElseThrow(() -> new RuntimeException("không tìm thấy giáo viên với id: " + teacherId));
 
-            // Khởi tạo Composite Key
-            ClassTeacherId compositeKey = new ClassTeacherId(classId, teacherId);
+            ClassTeacherId id = new ClassTeacherId(request.getClassId(), teacherId);
 
-            // Khởi tạo Entity trung gian
-            ClassTeacher classTeacher = ClassTeacher.builder()
-                    .id(compositeKey)
+            ClassTeacher newAssignment = ClassTeacher.builder()
+                    .id(id)
                     .schoolClass(schoolClass)
                     .teacher(teacher)
                     .build();
 
-            newAssignments.add(classTeacher);
+            newAssignments.add(newAssignment);
         }
 
-        // Lưu toàn bộ danh sách mới vào Database
-        List<ClassTeacher> savedAssignments = classTeacherRepository.saveAll(newAssignments);
+        classTeacherRepository.saveAll(newAssignments);
 
-        // 4. Map kết quả trả về Frontend
-        return mapToResponse(schoolClass, savedAssignments);
+        return mapToResponse(schoolClass, newAssignments);
     }
 
     @Override
     public ClassTeacherResponse getTeachersByClassId(Long classId) {
-        // Kiểm tra Lớp học
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + classId));
+                .orElseThrow(() -> new RuntimeException("không tìm thấy lớp học."));
 
-        // Query lấy danh sách phân công
-        List<ClassTeacher> classTeachers = classTeacherRepository.findBySchoolClassId(classId);
+        List<ClassTeacher> assignments = classTeacherRepository.findBySchoolClassId(classId);
 
-        return mapToResponse(schoolClass, classTeachers);
+        return mapToResponse(schoolClass, assignments);
     }
 
     @Override
     public List<SchoolClassResponse> getClassesByTeacherId(Long teacherId) {
-        // Query lấy danh sách phân công của giáo viên
-        List<ClassTeacher> classTeachers = classTeacherRepository.findByTeacherId(teacherId);
+        List<ClassTeacher> assignments = classTeacherRepository.findByTeacherId(teacherId);
 
-        return classTeachers.stream()
+        return assignments.stream()
                 .map(ct -> SchoolClassResponse.builder()
                         .id(ct.getSchoolClass().getId())
                         .name(ct.getSchoolClass().getName())
@@ -95,19 +82,15 @@ public class ClassTeacherServiceImpl implements ClassTeacherService {
                 .collect(Collectors.toList());
     }
 
-    // --- Helper Method ---
-    private ClassTeacherResponse mapToResponse(SchoolClass schoolClass, List<ClassTeacher> classTeachers) {
-        
-        // Trích xuất list TeacherBasicInfo từ mảng ClassTeacher
-        List<ClassTeacherResponse.TeacherBasicInfo> teacherInfos = classTeachers.stream()
+    private ClassTeacherResponse mapToResponse(SchoolClass schoolClass, List<ClassTeacher> assignments) {
+        List<ClassTeacherResponse.TeacherBasicInfo> teacherInfos = assignments.stream()
                 .map(ct -> ClassTeacherResponse.TeacherBasicInfo.builder()
                         .teacherId(ct.getTeacher().getId())
                         .fullName(ct.getTeacher().getFullName())
-                        .phone(ct.getTeacher().getUser().getUsername()) // Số điện thoại lưu ở bảng User 
+                        .phone(ct.getTeacher().getUser().getUsername())
                         .build())
                 .collect(Collectors.toList());
 
-        // Build Response tổng
         return ClassTeacherResponse.builder()
                 .classId(schoolClass.getId())
                 .className(schoolClass.getName())

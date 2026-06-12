@@ -17,7 +17,7 @@ public class TokenCleanupService {
     private final TokenBlacklistRepository tokenBlacklistRepository;
     private final com.vusystem.preschool_management_backend.modules.auth.repository.RefreshTokenRepository refreshTokenRepository;
 
-    // Chạy vào phút 0 của mỗi giờ (ví dụ 1:00, 2:00)
+    // lên lịch dọn dẹp token vào đầu mỗi giờ
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void cleanupExpiredTokens() {

@@ -7,15 +7,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface MedicationService {
-    // Phụ huynh: Tạo đơn xin uống thuốc
     MedicationResponse createRequest(MedicationCreateRequest request);
 
-    // Phụ huynh: Xem danh sách đơn thuốc của con
     List<MedicationResponse> getParentRequests(Long childId);
 
-    // Giáo viên: Lấy danh sách đơn thuốc của lớp (có kèm cảnh báo Dị ứng)
+    // phân tách api cho giáo viên, cần map thêm cảnh báo dị ứng từ profile học sinh
     List<MedicationResponse> getClassRequests(Long classId, LocalDate date);
 
-    // Giáo viên: Xác nhận đã cho uống thuốc xong
     void markAsCompleted(Long id);
 }

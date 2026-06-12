@@ -45,10 +45,8 @@ public class ReportServiceImpl implements ReportService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // 1. Lấy danh sách bé trong lớp
         List<Enrollment> enrollments = enrollmentRepository.findActiveEnrollmentsByClassId(classId);
 
-        // Map để lưu trữ DTO của từng bé
         Map<Long, ChildAttendanceReportDto> reportMap = new HashMap<>();
         for (Enrollment e : enrollments) {
             reportMap.put(e.getChild().getId(), ChildAttendanceReportDto.builder()
@@ -65,7 +63,6 @@ public class ReportServiceImpl implements ReportService {
                     .build());
         }
 
-        // 2. Lấy số liệu điểm danh
         List<Object[]> attendanceStats = dailyLogRepository.countAttendanceStatsForClass(classId, startDate, endDate);
         for (Object[] stat : attendanceStats) {
             Long childId = (Long) stat[0];
@@ -77,26 +74,24 @@ public class ReportServiceImpl implements ReportService {
                 if (status == AttendanceStatus.PRESENT) {
                     dto.setTotalPresentDays(count.intValue());
                 } else if (status == AttendanceStatus.ABSENT_UNEXCUSED || status == AttendanceStatus.ABSENT_EXCUSED) {
-                    // Tạm thời coi tất cả vắng mặt là không phép, sau đó trừ đi những ngày có phép
+                    // thuật toán: mặc định xem mọi sự vắng mặt là không phép, sau đó cấn trừ dần với số ngày nghỉ có phép đã duyệt
                     dto.setTotalUnexcusedAbsences(dto.getTotalUnexcusedAbsences() + count.intValue());
                 }
             }
         }
 
-        // 3. Tính số ngày nghỉ có phép
         List<LeaveRequest> leaveRequests = leaveRequestRepository.findApprovedLeaveRequestsForClassInDateRange(classId, startDate, endDate);
         for (LeaveRequest lr : leaveRequests) {
             Long childId = lr.getChild().getId();
             if (reportMap.containsKey(childId)) {
                 ChildAttendanceReportDto dto = reportMap.get(childId);
                 
-                // Tính số ngày giao nhau giữa (startDate, endDate) của báo cáo và LeaveRequest
                 LocalDate lrStart = lr.getStartDate().isBefore(startDate) ? startDate : lr.getStartDate();
                 LocalDate lrEnd = lr.getEndDate().isAfter(endDate) ? endDate : lr.getEndDate();
                 
                 int excusedDays = 0;
                 while (!lrStart.isAfter(lrEnd)) {
-                    // Nếu là ngày trong tuần (T2-T6) thì tính là nghỉ có phép
+                    // loại trừ thứ 7 và chủ nhật khỏi số ngày nghỉ có phép
                     if (lrStart.getDayOfWeek().getValue() >= 1 && lrStart.getDayOfWeek().getValue() <= 5) {
                         excusedDays++;
                     }
@@ -104,12 +99,10 @@ public class ReportServiceImpl implements ReportService {
                 }
                 
                 dto.setTotalExcusedAbsences(dto.getTotalExcusedAbsences() + excusedDays);
-                // Giảm số ngày nghỉ không phép xuống
                 dto.setTotalUnexcusedAbsences(Math.max(0, dto.getTotalUnexcusedAbsences() - excusedDays));
             }
         }
 
-        // 4. Lấy số liệu suất ăn đã hủy
         List<Object[]> mealStats = mealRegistrationRepository.countMonthlyMealStatsForClass(classId, startDate, endDate);
         for (Object[] stat : mealStats) {
             Long childId = (Long) stat[0];
@@ -131,7 +124,7 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 5. Tính tổng số ngày học của lớp (mặc định là số ngày cao nhất có mặt + vắng mặt của 1 bé)
+        // tổng số ngày học thực tế của lớp được tính bằng số ngày đi học lớn nhất cộng với số ngày nghỉ của học sinh đi học nhiều nhất
         int totalSchoolDays = 0;
         for (ChildAttendanceReportDto dto : reportMap.values()) {
             int total = dto.getTotalPresentDays() + dto.getTotalExcusedAbsences() + dto.getTotalUnexcusedAbsences();
@@ -140,11 +133,10 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 6. Cập nhật tỷ lệ chuyên cần
         for (ChildAttendanceReportDto dto : reportMap.values()) {
             if (totalSchoolDays > 0) {
                 double rate = (double) dto.getTotalPresentDays() / totalSchoolDays * 100;
-                dto.setAttendanceRate(Math.round(rate * 10.0) / 10.0); // Làm tròn 1 chữ số thập phân
+                dto.setAttendanceRate(Math.round(rate * 10.0) / 10.0);
             }
         }
 

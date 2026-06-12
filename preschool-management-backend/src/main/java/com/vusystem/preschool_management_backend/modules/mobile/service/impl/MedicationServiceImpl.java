@@ -25,7 +25,7 @@ public class MedicationServiceImpl implements MedicationService {
 
     private final MedicationRequestRepository medicationRepository;
     private final AllergyRepository allergyRepository;
-    private final ChildRepository childRepository; // Tận dụng repo cũ ở Core
+    private final ChildRepository childRepository;
     private final SecurityService securityService;
 
     @Override
@@ -33,16 +33,14 @@ public class MedicationServiceImpl implements MedicationService {
     public MedicationResponse createRequest(MedicationCreateRequest request) {
         securityService.verifyParentOwnsChild(request.getChildId());
 
-        // 1. Kiểm tra tồn tại học sinh
         Child child = childRepository.findById(request.getChildId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + request.getChildId()));
 
-        // 2. Validate ngày (đã chặn 1 phần ở DTO, check thêm logic nếu cần)
+        // xác minh logic ngày tháng ở tầng service để bảo vệ toàn vẹn dữ liệu
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu");
         }
 
-        // 3. Tạo Entity
         MedicationRequest newRequest = MedicationRequest.builder()
                 .child(child)
                 .medicationName(request.getMedicationName())
@@ -50,7 +48,7 @@ public class MedicationServiceImpl implements MedicationService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .note(request.getNotes())
-                .status(RequestStatus.PENDING) // Mặc định là chờ xử lý
+                .status(RequestStatus.PENDING)
                 .build();
 
         return mapToResponse(medicationRepository.save(newRequest));
@@ -70,17 +68,15 @@ public class MedicationServiceImpl implements MedicationService {
     public List<MedicationResponse> getClassRequests(Long classId, LocalDate date) {
         securityService.verifyTeacherTeachesClass(classId);
 
-        // Lấy danh sách thuốc cần uống
         List<MedicationRequest> requests = medicationRepository.findMedicationsForClassOnDate(classId, date);
 
-        // Map sang DTO và Lồng thêm cảnh báo DỊ ỨNG (Allergies)
+        // map thông tin dị ứng vào response để giáo viên chú ý khi cho uống thuốc
         return requests.stream().map(req -> {
             MedicationResponse dto = mapToResponse(req);
             
-            // Lấy danh sách dị ứng của bé này nhét vào DTO
             List<String> allergies = allergyRepository.findByChildId(req.getChild().getId())
                     .stream()
-                    .map(Allergy::getAllergen) // Lấy tên chất gây dị ứng
+                    .map(Allergy::getAllergen)
                     .collect(Collectors.toList());
             dto.setAllergies(allergies);
             
@@ -100,7 +96,6 @@ public class MedicationServiceImpl implements MedicationService {
         medicationRepository.save(request);
     }
 
-    // --- Helper Method ---
     private MedicationResponse mapToResponse(MedicationRequest entity) {
         return MedicationResponse.builder()
                 .id(entity.getId())

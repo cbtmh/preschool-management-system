@@ -22,7 +22,7 @@ export interface MealRegistrationResponse {
   className: string;
   date: string;
   mealType: string;
-  status: string; // 'REGISTERED' | 'CANCELLED'
+  status: string;
 }
 
 export const mealRegistrationService = {

@@ -6,12 +6,12 @@ import com.vusystem.preschool_management_backend.modules.mobile.dto.response.Inc
 import java.util.List;
 
 public interface IncidentService {
-    // Luồng Giáo viên
+    // phân tách api theo luồng giáo viên
     IncidentReportResponse createIncident(IncidentReportRequest request);
     List<IncidentReportResponse> getTeacherIncidents();
     IncidentReportResponse getIncidentDetail(Long id);
 
-    // Luồng Phụ huynh
+    // phân tách api theo luồng phụ huynh
     List<IncidentReportResponse> getParentIncidents(Long childId);
     IncidentReportResponse getParentIncidentDetail(Long id, Long childId);
 }

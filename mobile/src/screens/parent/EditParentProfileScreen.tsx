@@ -14,8 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MeResponse } from '../../types/auth';
-// Import accountService if you have an endpoint, for now we will mock the success
-// import { accountService } from '../../services/account.service';
 
 import { authService } from '../../services/auth.service';
 import { useDispatch } from 'react-redux';
@@ -44,10 +42,10 @@ export default function EditParentProfileScreen() {
       
       const response = await authService.updateParentProfile({ fullName, phone, address });
       
-      // Nếu số điện thoại thay đổi, Backend sẽ trả về Token mới
+      // nếu số điện thoại thay đổi, backend sẽ trả về token mới
       if (response.data) {
         const newToken = response.data;
-        // Lưu token mới vào Store và SecureStore
+        // lưu token mới vào store và securestore
         if (Platform.OS === 'web') {
           localStorage.setItem('token', newToken);
         } else {

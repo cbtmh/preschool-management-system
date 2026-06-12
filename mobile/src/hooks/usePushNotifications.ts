@@ -69,7 +69,6 @@ export const usePushNotifications = (): PushNotificationState => {
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       console.log('User interacted with notification', response);
-      // Here you could handle navigation based on the notification data
     });
 
     return () => {

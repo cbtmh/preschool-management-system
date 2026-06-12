@@ -14,7 +14,7 @@ export default function ParentIncidentScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [childId, setChildId] = useState<number | null>(null);
 
-  // Date selection states
+
   const [date, setDate] = useState<Date>(new Date());
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -86,7 +86,7 @@ export default function ParentIncidentScreen() {
     }
   };
 
-  // Filter incidents by selected date
+  // lọc sự cố theo ngày đã chọn
   const filteredIncidents = incidents.filter(incident => {
     const incidentDate = new Date(incident.incidentTime);
     return incidentDate.getDate() === date.getDate() && 

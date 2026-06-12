@@ -35,7 +35,7 @@ export default function TeacherMenuScreen() {
   const generateWeekDates = (baseDate: Date) => {
     const today = new Date(baseDate);
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // tính từ thứ hai
     const monday = new Date(today.setDate(diff));
     
     const dates = [];
@@ -114,9 +114,9 @@ export default function TeacherMenuScreen() {
   };
 
   const getMealColor = (type: string) => {
-    if (type === 'BREAKFAST') return '#fef3c7'; // amber-100
-    if (type === 'LUNCH') return '#dcfce7'; // green-100
-    if (type === 'SNACK') return '#e0e7ff'; // indigo-100
+    if (type === 'BREAKFAST') return '#fef3c7';
+    if (type === 'LUNCH') return '#dcfce7';
+    if (type === 'SNACK') return '#e0e7ff';
     return '#f1f5f9';
   };
 
@@ -129,7 +129,6 @@ export default function TeacherMenuScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
@@ -147,8 +146,6 @@ export default function TeacherMenuScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
           {weekDates.map((date, index) => {
@@ -171,8 +168,6 @@ export default function TeacherMenuScreen() {
           })}
         </ScrollView>
       </View>
-
-      {/* Meal List */}
       <ScrollView 
         contentContainerStyle={styles.mealList}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0ea5e9']} />}

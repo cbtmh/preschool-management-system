@@ -26,7 +26,6 @@ export default function ChangePasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChangePassword = async () => {
-    // Validations
     if (!oldPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
@@ -64,7 +63,6 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -94,7 +92,6 @@ export default function ChangePasswordScreen() {
           </View>
 
           <View style={styles.formContainer}>
-            {/* Old Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mật khẩu hiện tại</Text>
               <View style={styles.inputContainer}>
@@ -113,7 +110,6 @@ export default function ChangePasswordScreen() {
               </View>
             </View>
 
-            {/* New Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mật khẩu mới</Text>
               <View style={styles.inputContainer}>
@@ -132,7 +128,6 @@ export default function ChangePasswordScreen() {
               </View>
             </View>
 
-            {/* Confirm New Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
               <View style={styles.inputContainer}>

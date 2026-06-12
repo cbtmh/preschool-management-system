@@ -31,7 +31,7 @@ export interface EnrollmentResponse {
   academicYearId: number;
   academicYearName: string;
   enrollmentDate: string;
-  status: string; // 'STUDYING', 'DROPPED', 'COMPLETED'
+  status: string;
   notes: string;
 }
 

@@ -37,25 +37,23 @@ import java.util.stream.Collectors;
 public class ChildServiceImpl implements ChildService {
 
     private final ChildRepository childRepository;
-    private final ParentRepository parentRepository; // Bắt buộc phải có để map khóa ngoại
+    private final ParentRepository parentRepository;
     private final UserService userService;
     private final EnrollmentRepository enrollmentRepository;
 
     @Override
     @Transactional
     public ChildResponse createChild(ChildRequest request) {
-        // 1. Kiểm tra xem Parent ID mà Frontend gửi lên có tồn tại trong DB không
         Parent parent = parentRepository.findById(request.getParentId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Phụ huynh với ID: " + request.getParentId()));
 
-        // 2. Build Entity Child và móc nối vào Parent
         Child newChild = Child.builder()
                 .fullName(request.getFullName())
                 .dob(request.getDob())
                 .gender(request.getGender())
                 .status(request.getStatus())
                 .healthNotes(request.getHealthNotes())
-                .parent(parent) // Móc khóa ngoại ở đây
+                .parent(parent)
                 .allergyDeclared(request.getAllergyDeclared() != null ? request.getAllergyDeclared() : false)
                 .build();
                 
@@ -81,14 +79,13 @@ public class ChildServiceImpl implements ChildService {
         Child child = childRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Học sinh với ID: " + id));
 
-        // Nếu có thay đổi người giám hộ (ParentId bị đổi), phải check lại Parent mới
+        // kiểm tra và cập nhật lại thông tin phụ huynh nếu có sự thay đổi parent_id
         if (!child.getParent().getId().equals(request.getParentId())) {
             Parent newParent = parentRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Phụ huynh với ID: " + request.getParentId()));
             child.setParent(newParent);
         }
 
-        // Cập nhật các thông tin khác
         child.setFullName(request.getFullName());
         child.setDob(request.getDob());
         child.setGender(request.getGender());
@@ -123,7 +120,6 @@ public class ChildServiceImpl implements ChildService {
 
     @Override
     public List<ChildResponse> getChildrenByParentId(Long parentId) {
-        // Kiểm tra xem Parent có tồn tại không trước khi lấy list Child
         if (!parentRepository.existsById(parentId)) {
             throw new RuntimeException("Không tìm thấy hồ sơ Phụ huynh với ID: " + parentId);
         }
@@ -152,14 +148,10 @@ public class ChildServiceImpl implements ChildService {
         Child child = childRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Học sinh với ID: " + id));
         
-        // Khác với Teacher hay Parent (phải soft-delete User), 
-        // Child không có User nên ta có thể xóa trực tiếp hồ sơ khỏi DB.
-        // Hoặc nếu muốn lưu lại lịch sử, em có thể đổi Status thay vì xóa cứng. 
-        // Ở đây anh dùng xóa cứng (Hard Delete) theo chuẩn quan hệ DB.
+        // lưu ý: child entity không gắn với bảng user nên có thể hard delete trực tiếp
         childRepository.delete(child);
     }
 
-    // --- Helper Method: Chuyển đổi từ Entity sang Response DTO ---
     private ChildResponse mapToResponse(Child entity, boolean hasCurrentEnrollment) {
         return ChildResponse.builder()
                 .id(entity.getId())
@@ -169,8 +161,8 @@ public class ChildServiceImpl implements ChildService {
                 .status(entity.getStatus())
                 .healthNotes(entity.getHealthNotes())
                 .parentId(entity.getParent().getId())
-                .parentName(entity.getParent().getFullName()) // Lấy tên phụ huynh để FE hiển thị cho đẹp
-                .parentPhone(entity.getParent().getUser().getUsername()) // Số điện thoại là username
+                .parentName(entity.getParent().getFullName())
+                .parentPhone(entity.getParent().getUser().getUsername())
                 .hasCurrentEnrollment(hasCurrentEnrollment)
                 .allergyDeclared(entity.getAllergyDeclared())
                 .allergies(entity.getAllergies() != null ? entity.getAllergies().stream().map(a -> 
@@ -184,7 +176,6 @@ public class ChildServiceImpl implements ChildService {
                 .build();
     }
     
-    // Overloaded method cho create/update nơi học sinh mới chắc chắn chưa có lớp
     private ChildResponse mapToResponse(Child entity) {
         return mapToResponse(entity, false);
     }
@@ -235,7 +226,6 @@ public class ChildServiceImpl implements ChildService {
                 if (row == null) continue;
 
                 try {
-                    // Extract columns
                     String childName = getCellValueAsString(row.getCell(0));
                     String dobString = getCellValueAsString(row.getCell(1));
                     String genderString = getCellValueAsString(row.getCell(2));
@@ -245,16 +235,13 @@ public class ChildServiceImpl implements ChildService {
                     String parentEmail = getCellValueAsString(row.getCell(6));
 
                     if (childName.isEmpty() || parentPhone.isEmpty()) {
-                        continue; // Skip invalid rows
+                        continue;
                     }
 
-                    // Parse Date and Gender
                     LocalDate dob = LocalDate.parse(dobString);
                     Gender gender = Gender.valueOf(genderString.toUpperCase());
 
-                    // Check and Create User/Parent
                     Parent parent = parentRepository.findByUserUsername(parentPhone).orElseGet(() -> {
-                        // User DOES NOT exist
                         User newUser;
                         if (!userService.existsByUsername(parentPhone)) {
                             String emailToSave = parentEmail.isEmpty() ? null : parentEmail;
@@ -271,9 +258,8 @@ public class ChildServiceImpl implements ChildService {
                         return parentRepository.save(newParent);
                     });
 
-                    // Create Child
                     if (childRepository.existsByFullNameAndDobAndParentId(childName, dob, parent.getId())) {
-                        continue; // Skip because this child already exists for this parent
+                        continue;
                     }
 
                     Child newChild = Child.builder()

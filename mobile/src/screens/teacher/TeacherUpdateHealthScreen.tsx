@@ -71,7 +71,6 @@ export default function TeacherUpdateHealthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -98,8 +97,6 @@ export default function TeacherUpdateHealthScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.studentName}>{student.name}</Text>
               <Text style={styles.monthText}>Kỳ đánh giá: {currentMonthStr}</Text>
-              
-              {/* Allergy Information */}
               {student.allergyDeclared && student.allergies && student.allergies.length > 0 ? (
                 <View style={{ marginTop: 8 }}>
                   <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#ea580c', marginBottom: 4 }}>

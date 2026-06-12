@@ -14,7 +14,7 @@ export default function ParentAllergyScreen() {
   const [childId, setChildId] = useState<number | null>(route.params?.childId || null);
   const [currentChild, setCurrentChild] = useState<ChildSummaryDTO | null>(null);
 
-  // Allergy state
+
   const [showAllergyModal, setShowAllergyModal] = useState(route.params?.showAllergyModal || false);
   const [allergyDeclared, setAllergyDeclared] = useState(false);
   const [editingAllergies, setEditingAllergies] = useState<AllergyRequest[]>([]);
@@ -34,7 +34,7 @@ export default function ParentAllergyScreen() {
         foundChild = dashboardData.children.find(c => c.id === currentChildId) || dashboardData.children[0];
         setCurrentChild(foundChild);
         
-        // Initialize allergy state
+
         if (foundChild) {
           setAllergyDeclared(foundChild.allergyDeclared || false);
           if (foundChild.allergies) {
@@ -64,7 +64,7 @@ export default function ParentAllergyScreen() {
       await healthService.updateChildAllergies(currentChild.id, editingAllergies);
       Alert.alert('Thành công', 'Đã lưu thông tin dị ứng.');
       setShowAllergyModal(false);
-      loadData(); // Reload to get updated info
+      loadData(); // load lại để có dữ liệu mới
     } catch (error) {
       console.log('Lỗi lưu dị ứng:', error);
       Alert.alert('Lỗi', 'Không thể lưu thông tin dị ứng.');

@@ -71,7 +71,7 @@ export default function ParentHomeScreen() {
 
   const handleZaloTeacher = (phone: string) => {
     if (!phone) return;
-    // Format Zalo URL
+
     Linking.openURL(`https://zalo.me/${phone}`).catch(() => Alert.alert('Lỗi', 'Không thể mở Zalo'));
   };
 

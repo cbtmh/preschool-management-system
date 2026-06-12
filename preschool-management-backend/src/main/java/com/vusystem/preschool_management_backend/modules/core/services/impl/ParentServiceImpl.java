@@ -22,21 +22,19 @@ import java.util.stream.Collectors;
 public class ParentServiceImpl implements ParentService {
 
     private final ParentRepository parentRepository;
-    private final UserService userService; // Tiêm UserService để xử lý tạo tài khoản
-    private final UserRepository userRepository; // Dùng để update trạng thái User khi xóa
+    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Override
-    @Transactional // Quan trọng: Đảm bảo tính toàn vẹn dữ liệu
+    @Transactional
     public ParentResponse createParent(ParentCreateRequest request) {
-        // Bước 1: Gọi UserService để tạo tài khoản User trước
-        // Logic bên trong UserService đã check trùng username (số điện thoại) rồi
+        // lưu ý: service đã bao gồm logic kiểm tra trùng lặp số điện thoại
         User savedUser = userService.createNewUser(
                 request.getPhone(), 
                 request.getEmail(),
                 Role.PARENT
         );
 
-        // Bước 2: Tạo hồ sơ Parent liên kết với User vừa tạo
         Parent parent = Parent.builder()
                 .user(savedUser)
                 .fullName(request.getFullName())
@@ -66,7 +64,7 @@ public class ParentServiceImpl implements ParentService {
             user.setEmail(null);
         }
 
-        userRepository.save(user); // Lưu sự thay đổi của User (email) vào DB
+        userRepository.save(user);
         Parent updatedParent = parentRepository.save(parent);
         return mapToResponse(updatedParent);
     }
@@ -80,7 +78,7 @@ public class ParentServiceImpl implements ParentService {
 
     @Override
     public List<ParentResponse> getAllParents() {
-        // Sử dụng custom query findAllActiveParents để lấy Phụ huynh có User còn hoạt động
+        // chỉ lấy phụ huynh có tài khoản đang active để tránh rò rỉ dữ liệu tài khoản đã bị khóa
         return parentRepository.findAllActiveParents().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -92,13 +90,12 @@ public class ParentServiceImpl implements ParentService {
         Parent parent = parentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ phụ huynh với ID: " + id));
 
-        // Soft Delete: Khóa tài khoản User của phụ huynh này
+        // soft delete: khóa tài khoản thay vì xóa cứng để giữ lịch sử liên kết với học sinh
         User user = parent.getUser();
         user.setIsActive(false); 
         userRepository.save(user);
     }
 
-    // --- Helper Method: Map Entity sang Response DTO ---
     private ParentResponse mapToResponse(Parent entity) {
         List<String> childrenNames = entity.getChildren() != null 
             ? entity.getChildren().stream().map(child -> child.getFullName()).collect(Collectors.toList()) 

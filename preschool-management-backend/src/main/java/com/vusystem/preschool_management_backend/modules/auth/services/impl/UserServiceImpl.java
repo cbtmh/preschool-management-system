@@ -37,7 +37,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Email này đã được đăng ký tài khoản");
         }
 
-        // Generate a random 6-character alphanumeric password
+        // tạo mật khẩu ngẫu nhiên gồm 6 ký tự
         StringBuilder builder = new StringBuilder();
         Random random = new Random();
         for (int i = 0; i < 6; i++) {
@@ -57,14 +57,14 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(newUser);
         
-        // Send SMS
+        // gửi sms chứa mật khẩu tạm thời
         try {
             smsService.sendTemporaryPassword(username, generatedPassword);
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", username, e.getMessage());
         }
 
-        // Send Email if available
+        // gửi email chứa thông tin tài khoản nếu có email
         if (savedUser.getEmail() != null && !savedUser.getEmail().isEmpty()) {
             String roleName = role == Role.TEACHER ? "Giáo viên" : (role == Role.PARENT ? "Phụ huynh" : "Người dùng");
             mailService.sendAccountCreationEmail(savedUser.getEmail(), username, generatedPassword, roleName);
@@ -94,7 +94,7 @@ public class UserServiceImpl implements UserService {
     public void resendPassword(Long userId) {
         User user = findById(userId);
         
-        // Generate a new random 6-character alphanumeric password
+        // tạo mật khẩu ngẫu nhiên mới gồm 6 ký tự
         StringBuilder builder = new StringBuilder();
         Random random = new Random();
         for (int i = 0; i < 6; i++) {
@@ -107,14 +107,14 @@ public class UserServiceImpl implements UserService {
         user.setRequiresPasswordChange(true);
         userRepository.save(user);
 
-        // Send SMS
+        // gửi sms chứa mật khẩu tạm thời
         try {
             smsService.sendTemporaryPassword(user.getUsername(), generatedPassword);
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", user.getUsername(), e.getMessage());
         }
 
-        // Send Email if available
+        // gửi email chứa thông tin tài khoản nếu có email
         if (user.getEmail() != null && !user.getEmail().isEmpty()) {
             String roleName = user.getRole() == Role.TEACHER ? "Giáo viên" : (user.getRole() == Role.PARENT ? "Phụ huynh" : "Người dùng");
             mailService.sendAccountCreationEmail(user.getEmail(), user.getUsername(), generatedPassword, roleName);

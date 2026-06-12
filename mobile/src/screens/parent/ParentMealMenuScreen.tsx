@@ -20,7 +20,7 @@ export default function ParentMealMenuScreen() {
   const [children, setChildren] = useState<ChildSummaryDTO[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<number | null>(route.params?.childId || null);
   
-  // Menu State
+
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weeklyMenus, setWeeklyMenus] = useState<MealMenuResponse[]>([]);
@@ -38,7 +38,7 @@ export default function ParentMealMenuScreen() {
   const generateWeekDates = (baseDate: Date) => {
     const today = new Date(baseDate);
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // tính từ thứ 2
     const monday = new Date(today.setDate(diff));
     
     const dates = [];

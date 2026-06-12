@@ -39,12 +39,11 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
     private final MealRegistrationRepository mealRegistrationRepository;
     private final ChildRepository childRepository;
     
-    // Inject thêm EnrollmentRepository để lấy tên Lớp học hiện tại cho Response DTO
     private final EnrollmentRepository enrollmentRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final SecurityService securityService;
 
-    private static final LocalTime CUTOFF_TIME = LocalTime.of(8, 0); // Khóa lúc 8h00 sáng
+    private static final LocalTime CUTOFF_TIME = LocalTime.of(8, 0); // cấu hình thời gian khóa hệ thống đăng ký suất ăn để nhà bếp chốt số lượng thực phẩm (08:00 sáng)
 
 
     @Override
@@ -64,7 +63,6 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
     public List<MealRegistrationResponse> getRegistrationsByChildAndDateRange(Long childId, LocalDate startDate, LocalDate endDate) {
         securityService.verifyParentOwnsChild(childId);
         
-        // Validate ngày tháng hợp lệ
         if (startDate.isAfter(endDate)) {
             throw new RuntimeException("Ngày bắt đầu không thể lớn hơn ngày kết thúc.");
         }
@@ -89,7 +87,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         LocalDate startDate = LocalDate.of(request.getYear(), request.getMonth(), 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // Get all existing registrations for the month to avoid creating duplicates
+        // truy xuất toàn bộ đăng ký hiện có trong tháng để tránh ghi đè dữ liệu hoặc tạo duplicate record
         List<MealRegistration> existingRegistrations = mealRegistrationRepository
                 .findByChildIdAndDateBetweenOrderByDateAsc(request.getChildId(), startDate, endDate);
 
@@ -104,12 +102,11 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         }
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            // Only process weekdays (Monday to Friday)
+            // logic nghiệp vụ: chỉ xử lý đăng ký suất ăn cho các ngày trong tuần (thứ 2 đến thứ 6)
             if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 continue;
             }
             
-            // Skip past days or today if after cutoff time
             if (date.isBefore(today) || (date.isEqual(today) && LocalTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).isAfter(CUTOFF_TIME))) {
                 continue; 
             }
@@ -153,7 +150,6 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
         LocalDate applyDate = request.getDate();
 
-        // Validate Business Rules: Past date and Cutoff Time
         validateTimeRule(applyDate);
 
         if (applyDate.getDayOfWeek() == DayOfWeek.SATURDAY || applyDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
@@ -198,8 +194,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         }
     }
 
-    // --- Private Helper Methods ---
-
+    
     private void validateTimeRule(LocalDate applyDate) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         
@@ -218,8 +213,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         return MealRegistrationResponse.builder()
                 .id(entity.getId())
                 .childId(entity.getChild().getId())
-                .childFullName(entity.getChild().getFullName()) // Lấy từ Entity Child
-                .className(currentClassName) // Lấy từ parameter (tránh N+1)
+                .childFullName(entity.getChild().getFullName())
+                .className(currentClassName)
                 .date(entity.getDate())
                 .mealType(entity.getMealType())
                 .status(entity.getStatus())
@@ -228,16 +223,13 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
     @Override
     public MealStatisticsResponse getMealStatistics(LocalDate startDate, LocalDate endDate) {
-        // Gọi hàm repository mà em đã viết sẵn
         List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate);
         
         long breakfastCount = 0;
         long lunchCount = 0;
         long snackCount = 0;
 
-        // Map dữ liệu từ DB (Object[]) sang DTO
         for (Object[] row : results) {
-            // Kiểm tra an toàn tránh null
             if (row[0] == null || row[1] == null) continue;
             
             String mealType = row[0].toString();
@@ -266,19 +258,15 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
     @Override
     public List<ChildMonthlyMealStatsResponse> getMonthlyMealStatsByClass(Long classId, int month, int year) {
-        // 1. Nghiệp vụ kiểm tra tính toàn vẹn: Check lớp học có tồn tại không theo đúng pattern hệ thống
          if (!schoolClassRepository.existsById(classId)) {
              throw new RuntimeException("Không tìm thấy lớp học với ID: " + classId);
          }
 
-        // 2. Tự động tính toán ngày đầu tháng và ngày cuối tháng để truyền vào câu query linh hoạt
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // 3. Gọi hàm Repo lấy mớ Object[] thô từ SQL Group By lên
         List<Object[]> rawStats = mealRegistrationRepository.countMonthlyMealStatsForClass(classId, startDate, endDate);
 
-        // 4. Khởi tạo LinkedHashMap để giữ đúng thứ tự sắp xếp và gom dòng của học sinh
         Map<Long, ChildMonthlyMealStatsResponse> statsMap = new LinkedHashMap<>();
 
         for (Object[] row : rawStats) {
@@ -287,7 +275,6 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
             MealRegStatus status = (MealRegStatus) row[2]; // Ép kiểu về đúng Enum MealRegStatus của dự án
             long count = (Long) row[3];
 
-            // Nếu học sinh này chưa có trong Map thì tạo mới khung DTO ban đầu
             ChildMonthlyMealStatsResponse studentStats = statsMap.computeIfAbsent(childId, id -> 
                 ChildMonthlyMealStatsResponse.builder()
                     .childId(id)
@@ -297,7 +284,6 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                     .build()
             );
 
-            // Bóc tách đếm số record cộng dồn vào DTO đại diện của học sinh đó
             if (status == MealRegStatus.REGISTERED) {
                 studentStats.setTotalRegistered(count);
             } else if (status == MealRegStatus.CANCELLED) {
@@ -305,7 +291,53 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
             }
         }
 
-        // 5. Trả về danh sách DTO đã được gom nhóm sạch đẹp cho từng cá nhân bé
         return new ArrayList<>(statsMap.values());
+    }
+
+    @Override
+    @Transactional
+    public void cancelMealsForLeave(Long childId, LocalDate startDate, LocalDate endDate) {
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + childId));
+
+        List<MealRegistration> existingRegistrations = mealRegistrationRepository
+                .findByChildIdAndDateBetweenOrderByDateAsc(childId, startDate, endDate);
+
+        List<MealRegistration> recordsToSave = new ArrayList<>();
+        MealType[] allMealTypes = MealType.values(); // BREAKFAST, LUNCH, SNACK
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            // thuật toán: bỏ qua thứ 7 và chủ nhật khi cấn trừ suất ăn tự động do học sinh xin nghỉ
+            if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                continue;
+            }
+
+            for (MealType mealType : allMealTypes) {
+                final LocalDate checkDate = date;
+                MealRegistration existing = existingRegistrations.stream()
+                        .filter(r -> r.getDate().isEqual(checkDate) && r.getMealType() == mealType)
+                        .findFirst()
+                        .orElse(null);
+
+                if (existing != null) {
+                    if (existing.getStatus() != MealRegStatus.CANCELLED) {
+                        existing.setStatus(MealRegStatus.CANCELLED);
+                        recordsToSave.add(existing);
+                    }
+                } else {
+                    MealRegistration newReg = MealRegistration.builder()
+                            .child(child)
+                            .date(date)
+                            .mealType(mealType)
+                            .status(MealRegStatus.CANCELLED)
+                            .build();
+                    recordsToSave.add(newReg);
+                }
+            }
+        }
+
+        if (!recordsToSave.isEmpty()) {
+            mealRegistrationRepository.saveAll(recordsToSave);
+        }
     }
 }

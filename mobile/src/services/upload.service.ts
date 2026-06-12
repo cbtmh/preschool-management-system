@@ -44,11 +44,14 @@ export const uploadService = {
     } as any);
 
     try {
-      const response = await axiosInstance.post('/upload/image', formData, {
+      const response = await axiosInstance.post('/v1/upload/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
         },
+        transformRequest: (data) => data,
       });
+
       if (response.data && response.data.data && response.data.data.url) {
         return response.data.data.url;
       }

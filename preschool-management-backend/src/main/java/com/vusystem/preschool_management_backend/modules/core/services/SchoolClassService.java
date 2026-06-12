@@ -10,6 +10,6 @@ public interface SchoolClassService {
     SchoolClassResponse updateClass(Long id, SchoolClassRequest request);
     SchoolClassResponse getClassById(Long id);
     List<SchoolClassResponse> getAllClasses();
-    List<SchoolClassResponse> getClassesByAcademicYearId(Long academicYearId); // Lấy danh sách lớp theo năm học
+    List<SchoolClassResponse> getClassesByAcademicYearId(Long academicYearId);
     void deleteClass(Long id);
 }

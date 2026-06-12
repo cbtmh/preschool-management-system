@@ -56,13 +56,10 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Header Background */}
         <View style={styles.headerBackground}>
           <View style={styles.headerDecoration1} />
           <View style={styles.headerDecoration2} />
         </View>
-
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
@@ -80,8 +77,6 @@ export default function ProfileScreen() {
             <Text style={styles.usernameText}>{username}</Text>
           </View>
         </View>
-
-        {/* Info Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
@@ -97,8 +92,6 @@ export default function ProfileScreen() {
             <InfoRow icon="location-outline" label="Địa chỉ" value={profile?.address} noBorder />
           </View>
         </View>
-
-        {/* Settings Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Cài đặt</Text>
           <View style={styles.infoCard}>
@@ -109,8 +102,6 @@ export default function ProfileScreen() {
             <ActionRow icon="help-circle-outline" label="Trợ giúp & Hỗ trợ" onPress={() => navigation.navigate('HelpSupport')} noBorder />
           </View>
         </View>
-
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color="#ef4444" />
           <Text style={styles.logoutText}>Đăng xuất</Text>

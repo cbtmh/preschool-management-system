@@ -40,7 +40,7 @@ export default function NewsDetailScreen() {
 
   const stripHtmlTags = (html: string) => {
     if (!html) return '';
-    // Basic regex to strip HTML tags
+
     return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, '');
   };
 

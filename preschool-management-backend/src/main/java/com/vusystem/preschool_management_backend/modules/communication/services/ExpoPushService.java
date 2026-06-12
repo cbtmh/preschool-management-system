@@ -24,15 +24,14 @@ public class ExpoPushService {
         this.restTemplate = new RestTemplate();
     }
 
-    public void sendPushNotifications(List<String> pushTokens, String title, String body, Map<String, Object> data) {
+    public boolean sendPushNotifications(List<String> pushTokens, String title, String body, Map<String, Object> data) {
         if (pushTokens == null || pushTokens.isEmpty()) {
-            return;
+            return false;
         }
 
         List<Map<String, Object>> messages = new ArrayList<>();
 
         for (String token : pushTokens) {
-            // Validate token format if needed
             if (token != null && token.startsWith("ExponentPushToken")) {
                 Map<String, Object> message = new HashMap<>();
                 message.put("to", token);
@@ -47,7 +46,7 @@ public class ExpoPushService {
         }
 
         if (messages.isEmpty()) {
-            return;
+            return false;
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -60,8 +59,10 @@ public class ExpoPushService {
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(EXPO_PUSH_URL, request, String.class);
             log.info("Sent push notifications successfully. Response: {}", response.getBody());
+            return true;
         } catch (Exception e) {
             log.error("Failed to send Expo push notifications: {}", e.getMessage());
+            return false;
         }
     }
 }

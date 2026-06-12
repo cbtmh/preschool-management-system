@@ -97,7 +97,7 @@ public class HealthRecordServiceImpl implements HealthRecordService {
         int currentMonth = month != null ? month : now.getMonthValue();
         int currentYear = year != null ? year : now.getYear();
 
-        // Fix N+1: Fetch all health records for the class in one query
+        // fix lỗi n+1 query: tối ưu bằng cách lấy tất cả health record của lớp trong một câu truy vấn in()
         List<Long> childIds = enrollments.stream().map(e -> e.getChild().getId()).collect(Collectors.toList());
         
         java.util.Map<Long, List<HealthRecord>> recordsByChild = childIds.isEmpty() ? 
@@ -165,10 +165,8 @@ public class HealthRecordServiceImpl implements HealthRecordService {
     public com.vusystem.preschool_management_backend.modules.core.dto.response.ChildResponse updateChildAllergiesByTeacher(Long childId, List<com.vusystem.preschool_management_backend.modules.core.dto.request.AllergyRequest> request) {
         securityService.verifyTeacherTeachesChild(childId);
         
-        // 1. Save allergies using ChildService
         com.vusystem.preschool_management_backend.modules.core.dto.response.ChildResponse childResponse = childService.updateChildAllergies(childId, request);
 
-        // 2. Find parent user
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh ID: " + childId));
         Parent parent = child.getParent();

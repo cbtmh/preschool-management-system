@@ -119,7 +119,6 @@ public class IncidentServiceImpl implements IncidentService {
             }
         }
 
-        // Send notification to Admin
         SendNotificationRequest notifReq = SendNotificationRequest.builder()
                 .title("Sự việc mới: " + request.getTitle())
                 .content("Giáo viên " + teacher.getFullName() + " vừa báo cáo một sự việc mới tại lớp " + schoolClass.getName())
@@ -181,7 +180,7 @@ public class IncidentServiceImpl implements IncidentService {
         IncidentReport report = incidentReportRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tường trình"));
         
-        // Ensure teacher can view if they reported it OR they are a teacher in the same class
+        // đảm bảo bảo mật: giáo viên chỉ xem được sự cố do mình báo cáo hoặc sự cố của lớp mình phụ trách
         boolean isReportedByThem = report.getReportedBy().getId().equals(teacher.getId());
         boolean isTeacherInClass = classTeacherRepository.findBySchoolClassId(report.getSchoolClass().getId())
                 .stream()
@@ -200,7 +199,7 @@ public class IncidentServiceImpl implements IncidentService {
         User user = getCurrentUser();
         securityService.verifyParentOwnsChild(childId);
         
-        // Phụ huynh thấy những incident có trạng thái IN_PROGRESS hoặc RESOLVED
+        // chỉ hiển thị sự cố đã được admin duyệt để tránh gây hoang mang
         List<IncidentReport> reports = incidentReportRepository.findByChildIdAndStatusIn(
                 childId, 
                 Arrays.asList(IncidentStatus.IN_PROGRESS, IncidentStatus.RESOLVED)
@@ -240,10 +239,10 @@ public class IncidentServiceImpl implements IncidentService {
         List<IncidentReportResponse.InvolvedChildRes> childResList = involvedChildren.stream().map(ic -> {
             String childName = ic.getChild().getFullName();
             
-            // Logic che giấu tên trẻ khác nếu viewer là Parent
+            // bảo mật thông tin: che tên các trẻ khác liên quan nếu người xem là phụ huynh
             if (maskOtherChildren && viewerChildId != null) {
                 if (!ic.getChild().getId().equals(viewerChildId)) {
-                    childName = "Một bé khác"; // Che tên
+                    childName = "Một bé khác";
                 }
             }
             

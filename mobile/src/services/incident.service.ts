@@ -11,7 +11,7 @@ export interface InvolvedChildReq {
 }
 
 export interface IncidentReportRequest {
-  incidentTime: string; // ISO 8601 string
+  incidentTime: string;
   description: string;
   severityLevel: SeverityLevel;
   classId: number;
@@ -45,7 +45,7 @@ export interface IncidentReportResponse {
 }
 
 export const incidentService = {
-  // --- Teacher APIs ---
+
   createIncident: async (data: IncidentReportRequest): Promise<IncidentReportResponse> => {
     const response = await axiosInstance.post<{status: number, message: string, data: IncidentReportResponse}>('/mobile/incidents/teacher', data);
     return response.data.data;
@@ -61,7 +61,7 @@ export const incidentService = {
     return response.data.data;
   },
 
-  // --- Parent APIs ---
+
   getParentIncidents: async (childId: number): Promise<IncidentReportResponse[]> => {
     const response = await axiosInstance.get<{status: number, message: string, data: IncidentReportResponse[]}>(`/mobile/incidents/parent/children/${childId}`);
     return response.data.data;

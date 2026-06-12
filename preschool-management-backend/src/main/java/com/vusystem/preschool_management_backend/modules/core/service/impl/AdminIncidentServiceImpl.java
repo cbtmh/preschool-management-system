@@ -74,7 +74,7 @@ public class AdminIncidentServiceImpl implements AdminIncidentService {
         
         IncidentReport savedReport = incidentReportRepository.save(report);
 
-        // Bắn thông báo nếu chuyển sang trạng thái IN_PROGRESS hoặc RESOLVED
+        // gửi thông báo cho phụ huynh khi trạng thái sự cố được cập nhật
         if (request.getStatus() != null && request.getStatus() != oldStatus &&
             (request.getStatus() == IncidentStatus.IN_PROGRESS || request.getStatus() == IncidentStatus.RESOLVED)) {
             

@@ -135,7 +135,7 @@ export default function AttendanceScreen() {
     const newDate = new Date(date);
     newDate.setDate(newDate.getDate() + days);
     setDate(newDate);
-    // If the new date is outside current weekDates, regenerate week dates
+    // nếu ngày mới nằm ngoài tuần hiện tại thì tạo lại danh sách ngày
     const isOutsideWeek = !weekDates.some(d => d.getDate() === newDate.getDate() && d.getMonth() === newDate.getMonth());
     if (isOutsideWeek) {
       generateWeekDates(newDate);
@@ -144,7 +144,7 @@ export default function AttendanceScreen() {
 
   const getCurrentTimeString = () => {
     const now = new Date();
-    return now.toTimeString().split(' ')[0]; // "HH:mm:ss"
+    return now.toTimeString().split(' ')[0];
   };
 
   const openTimePicker = (childId: number, type: 'in' | 'out', currentTimeStr?: string) => {
@@ -240,22 +240,19 @@ export default function AttendanceScreen() {
 
   const filteredClasses = selectedYear ? classes.filter(c => c.academicYearName === selectedYear) : classes;
 
-  // Stats
+
   const totalStudents = students.length;
   const presentCount = Object.values(logs).filter(l => l.attendanceStatus === AttendanceStatus.PRESENT).length;
   const absentCount = totalStudents - presentCount;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Date Navigation */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Điểm danh</Text>
         <TouchableOpacity onPress={() => setShowHistoryModal(true)} style={styles.dateBtn}>
           <Ionicons name="calendar-outline" size={24} color="#10b981" />
         </TouchableOpacity>
       </View>
-
-      {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
           {weekDates.map((d, index) => {
@@ -278,8 +275,6 @@ export default function AttendanceScreen() {
           })}
         </ScrollView>
       </View>
-
-      {/* Academic Year Selector */}
       {academicYears.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearSelector} contentContainerStyle={styles.yearSelectorContent}>
           {academicYears.map(year => (
@@ -301,8 +296,6 @@ export default function AttendanceScreen() {
           ))}
         </ScrollView>
       )}
-
-      {/* Class Selector */}
       {filteredClasses.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classSelector}>
           {filteredClasses.map(cls => (
@@ -325,7 +318,7 @@ export default function AttendanceScreen() {
         </ScrollView>
       )}
 
-      {/* Stats & Batch Actions */}
+
       {!loading && students.length > 0 && (
         <View style={styles.summaryBar}>
           <View style={styles.statsContainer}>
@@ -339,8 +332,6 @@ export default function AttendanceScreen() {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Student List */}
       <View style={styles.listContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {loading ? (
@@ -389,10 +380,8 @@ export default function AttendanceScreen() {
                       )}
                     </View>
                   </View>
-
-                  {/* Fast Action Buttons */}
                   <View style={styles.actionButtons}>
-                    {/* Check In (Present) */}
+
                     <TouchableOpacity 
                       style={[
                         styles.actionBtn, 
@@ -404,7 +393,7 @@ export default function AttendanceScreen() {
                       <Ionicons name="checkmark" size={20} color={log.attendanceStatus === AttendanceStatus.PRESENT ? "#fff" : "#10b981"} />
                     </TouchableOpacity>
 
-                    {/* Check Out - Only visible if PRESENT */}
+
                     {log.attendanceStatus === AttendanceStatus.PRESENT && (
                       <TouchableOpacity 
                         style={[
@@ -421,8 +410,6 @@ export default function AttendanceScreen() {
                         />
                       </TouchableOpacity>
                     )}
-
-                    {/* Absent Excused */}
                     <TouchableOpacity 
                       style={[
                         styles.actionBtn, 
@@ -436,8 +423,6 @@ export default function AttendanceScreen() {
                         {color: log.attendanceStatus === AttendanceStatus.ABSENT_EXCUSED ? "#fff" : "#f59e0b"}
                       ]}>P</Text>
                     </TouchableOpacity>
-
-                    {/* Absent Unexcused */}
                     <TouchableOpacity 
                       style={[
                         styles.actionBtn, 
@@ -458,8 +443,6 @@ export default function AttendanceScreen() {
           )}
         </ScrollView>
       </View>
-
-      {/* Save Button */}
       {!loading && students.length > 0 && (
         <View style={styles.footer}>
           <TouchableOpacity 
@@ -738,7 +721,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionBtn: {
-    width: 36, // slightly smaller to fit 4 buttons
+    width: 36, // thu nhỏ để vừa 4 nút
     height: 36,
     borderRadius: 8,
     justifyContent: 'center',
@@ -784,7 +767,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e8f0',
   },
   saveButton: {
-    backgroundColor: '#10b981', // green for save
+    backgroundColor: '#10b981',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

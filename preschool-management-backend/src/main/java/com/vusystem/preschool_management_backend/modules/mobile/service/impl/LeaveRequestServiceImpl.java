@@ -8,6 +8,13 @@ import com.vusystem.preschool_management_backend.modules.mobile.dto.request.Leav
 import com.vusystem.preschool_management_backend.modules.mobile.dto.response.LeaveRequestResponse;
 import com.vusystem.preschool_management_backend.modules.mobile.repository.LeaveRequestRepository;
 import com.vusystem.preschool_management_backend.modules.mobile.service.LeaveRequestService;
+import com.vusystem.preschool_management_backend.modules.core.services.MealRegistrationService;
+import com.vusystem.preschool_management_backend.modules.communication.services.NotificationService;
+import com.vusystem.preschool_management_backend.modules.core.repository.EnrollmentRepository;
+import com.vusystem.preschool_management_backend.modules.communication.dto.SendNotificationRequest;
+import com.vusystem.preschool_management_backend.common.entity.enums.NotificationType;
+import com.vusystem.preschool_management_backend.common.entity.academic.Enrollment;
+import com.vusystem.preschool_management_backend.common.entity.enums.EnrollmentStatus;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +33,9 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final ChildRepository childRepository;
     private final SecurityService securityService;
+    private final MealRegistrationService mealRegistrationService;
+    private final NotificationService notificationService;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Override
     @Transactional
@@ -38,19 +48,17 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         LocalTime now = LocalTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
 
-        // Validate ngày bắt đầu
         if (request.getStartDate().isBefore(today)) {
             throw new RuntimeException("Không thể tạo đơn xin nghỉ cho ngày trong quá khứ.");
         }
 
-        // Validate cutoff time nếu xin nghỉ ngày hôm nay
+        // chặn xin nghỉ quá muộn trong ngày để đảm bảo nhà trường kịp chuẩn bị suất ăn và báo cáo sĩ số
         if (request.getStartDate().isEqual(today)) {
             if (now.isAfter(LocalTime.of(9, 0))) {
                 throw new RuntimeException("Đã quá 9:00 sáng, bạn không thể xin nghỉ cho ngày hôm nay nữa.");
             }
         }
 
-        // Validate ngày kết thúc
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu.");
         }
@@ -63,7 +71,30 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .status(RequestStatus.PENDING)
                 .build();
 
-        return mapToResponse(leaveRequestRepository.save(entity));
+        LeaveRequest savedEntity = leaveRequestRepository.save(entity);
+
+        try {
+            Long currentUserId = securityService.getCurrentUser().getId();
+            Enrollment enrollment = enrollmentRepository.findByChildIdAndStatus(child.getId(), EnrollmentStatus.STUDYING).orElse(null);
+            
+            if (enrollment != null && enrollment.getSchoolClass() != null) {
+                SendNotificationRequest notifRequest = SendNotificationRequest.builder()
+                        .title("Đơn xin nghỉ học mới")
+                        .content("Phụ huynh bé " + child.getFullName() + " vừa gửi đơn xin nghỉ từ ngày " + request.getStartDate() + " đến ngày " + request.getEndDate() + ".")
+                        .type(NotificationType.CLASS)
+                        .targetClassIds(List.of(enrollment.getSchoolClass().getId()))
+                        .targetRoles(List.of("TEACHER"))
+                        .referenceType("LEAVE_REQUEST")
+                        .referenceId(savedEntity.getId())
+                        .build();
+                notificationService.sendNotification(notifRequest, currentUserId);
+            }
+        } catch (Exception e) {
+            // try catch để việc gửi thông báo lỗi (vd mạng chập chờn) không làm hỏng luồng tạo đơn
+            System.err.println("Lỗi khi gửi thông báo đơn xin nghỉ: " + e.getMessage());
+        }
+
+        return mapToResponse(savedEntity);
     }
 
     @Override
@@ -71,6 +102,16 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         securityService.verifyParentOwnsChild(childId);
         
         return leaveRequestRepository.findByChildIdOrderByCreatedAtDesc(childId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<LeaveRequestResponse> getClassRequests(Long classId) {
+        securityService.verifyTeacherTeachesClass(classId);
+
+        return leaveRequestRepository.findLeaveRequestsByClassIdOrderByCreatedAtDesc(classId)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -86,6 +127,15 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         
         request.setStatus(RequestStatus.valueOf(status));
         leaveRequestRepository.save(request);
+
+        // tự động hủy suất ăn trong những ngày nghỉ để tránh lãng phí và hoàn tiền cho phụ huynh
+        if (RequestStatus.APPROVED.name().equals(status)) {
+            mealRegistrationService.cancelMealsForLeave(
+                    request.getChild().getId(),
+                    request.getStartDate(),
+                    request.getEndDate()
+            );
+        }
     }
 
     private LeaveRequestResponse mapToResponse(LeaveRequest entity) {

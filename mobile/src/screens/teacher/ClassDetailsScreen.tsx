@@ -30,7 +30,7 @@ export default function ClassDetailsScreen({ route, navigation }: any) {
       
       setClassData(teachersRes);
       
-      // Chỉ lấy học sinh đang học
+      // chỉ lấy học sinh đang học
       const studyingStudents = studentsRes.filter(s => s.status === 'STUDYING');
       setStudents(studyingStudents);
       setFilteredStudents(studyingStudents);
@@ -76,7 +76,6 @@ export default function ClassDetailsScreen({ route, navigation }: any) {
 
   const renderHeader = () => (
     <View style={styles.listHeaderContainer}>
-      {/* Class Info Card */}
       <View style={styles.classInfoCard}>
         <Text style={styles.className}>{classInfo.name}</Text>
         <View style={styles.classMeta}>
@@ -86,8 +85,6 @@ export default function ClassDetailsScreen({ route, navigation }: any) {
           <Text style={styles.academicYear}>{classInfo.academicYearName}</Text>
         </View>
       </View>
-
-      {/* Teachers Section */}
       <Text style={styles.sectionTitle}>Giáo viên phụ trách</Text>
       <View style={styles.teachersContainer}>
         {classData?.teachers.map((teacher) => (
@@ -102,14 +99,10 @@ export default function ClassDetailsScreen({ route, navigation }: any) {
           </View>
         ))}
       </View>
-
-      {/* Students Section Header */}
       <View style={styles.studentsHeader}>
         <Text style={styles.sectionTitle}>Học sinh</Text>
         <Text style={styles.studentCount}>Tổng cộng {filteredStudents.length}</Text>
       </View>
-
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color="#94a3b8" style={styles.searchIcon} />
         <TextInput
@@ -148,7 +141,6 @@ export default function ClassDetailsScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#3b82f6" />

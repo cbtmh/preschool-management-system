@@ -66,7 +66,6 @@ export default function TeacherChildProfileScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#3b82f6" />
@@ -76,7 +75,6 @@ export default function TeacherChildProfileScreen({ route, navigation }: any) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarLarge}>
             <Text style={styles.avatarLargeText}>{childData.fullName.charAt(0)}</Text>
@@ -88,8 +86,6 @@ export default function TeacherChildProfileScreen({ route, navigation }: any) {
             </Text>
           </View>
         </View>
-
-        {/* Basic Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
           <View style={styles.infoRow}>
@@ -111,8 +107,6 @@ export default function TeacherChildProfileScreen({ route, navigation }: any) {
             </View>
           </View>
         </View>
-
-        {/* Health Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sức khỏe & Dị ứng</Text>
           {childData.healthNotes ? (
@@ -146,8 +140,6 @@ export default function TeacherChildProfileScreen({ route, navigation }: any) {
             </View>
           )}
         </View>
-
-        {/* Parent Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin phụ huynh</Text>
           <View style={styles.infoRow}>

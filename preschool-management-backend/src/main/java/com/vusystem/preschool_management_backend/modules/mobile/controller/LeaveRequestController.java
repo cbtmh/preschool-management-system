@@ -42,6 +42,16 @@ public class LeaveRequestController {
 
     // --- TEACHER / ADMIN APIs ---
 
+    @GetMapping("/classes/{classId}")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+    public ApiResponse<List<LeaveRequestResponse>> getClassRequests(@PathVariable Long classId) {
+        return ApiResponse.<List<LeaveRequestResponse>>builder()
+                .status(200)
+                .message("Lấy danh sách đơn xin nghỉ của lớp thành công")
+                .data(leaveRequestService.getClassRequests(classId))
+                .build();
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     public ApiResponse<?> updateStatus(@PathVariable Long id, @RequestParam String status) {

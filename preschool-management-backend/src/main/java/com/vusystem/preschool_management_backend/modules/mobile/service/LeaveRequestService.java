@@ -8,5 +8,6 @@ import java.util.List;
 public interface LeaveRequestService {
     LeaveRequestResponse createRequest(LeaveRequestCreateRequest request);
     List<LeaveRequestResponse> getParentRequests(Long childId);
-    void updateStatus(Long id, String status); // Dùng chung cho Teacher/Admin sau này
+    void updateStatus(Long id, String status); // thiết kế dùng chung cho teacher và admin mở rộng sau này
+    List<LeaveRequestResponse> getClassRequests(Long classId);
 }

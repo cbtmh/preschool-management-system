@@ -6,7 +6,7 @@ import { RootState } from '../store';
 import { logout } from '../store/slices/authSlice';
 import { setUnreadCount } from '../store/slices/notificationSlice';
 import TeacherHomeStack from '../screens/teacher/TeacherHomeStack';
-import DailyLogScreen from '../screens/teacher/DailyLogScreen';
+import TeacherUtilityStack from '../screens/teacher/TeacherUtilityStack';
 import AttendanceScreen from '../screens/teacher/AttendanceScreen';
 import NotificationScreen from '../screens/teacher/NotificationScreen';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,9 +31,7 @@ export default function TeacherTabNavigator() {
       };
       
       fetchUnreadCount();
-      // Optional: Set up an interval to poll if real-time is needed
-      // const interval = setInterval(fetchUnreadCount, 60000); // every minute
-      // return () => clearInterval(interval);
+
     }, [dispatch])
   );
 
@@ -47,8 +45,8 @@ export default function TeacherTabNavigator() {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Attendance') {
             iconName = focused ? 'checkmark-circle' : 'checkmark-circle-outline';
-          } else if (route.name === 'Daily Log') {
-            iconName = focused ? 'restaurant' : 'restaurant-outline';
+          } else if (route.name === 'Utilities') {
+            iconName = focused ? 'grid' : 'grid-outline';
           } else if (route.name === 'Notification') {
             iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Profile') {
@@ -57,7 +55,7 @@ export default function TeacherTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#10b981', // Changed to green to match Attendance and new theme
+        tabBarActiveTintColor: '#10b981',
         tabBarInactiveTintColor: 'gray',
       })}
     >
@@ -72,9 +70,9 @@ export default function TeacherTabNavigator() {
         options={{ headerShown: false, tabBarLabel: 'Điểm danh' }}
       />
       <Tab.Screen 
-        name="Daily Log" 
-        component={DailyLogScreen}
-        options={{ headerShown: false, tabBarLabel: 'Hoạt động' }}
+        name="Utilities" 
+        component={TeacherUtilityStack}
+        options={{ headerShown: false, tabBarLabel: 'Tiện ích' }}
       />
       <Tab.Screen 
         name="Notification" 

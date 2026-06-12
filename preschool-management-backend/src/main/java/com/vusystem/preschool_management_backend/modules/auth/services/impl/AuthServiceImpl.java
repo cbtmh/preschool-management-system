@@ -47,47 +47,38 @@ public class AuthServiceImpl implements AuthService {
         @Transactional
         public AuthResponse login(LoginRequest request) {
 
-                // 1. Xác thực bằng AuthenticationManager của Spring Security (thay cho check
-                // password thủ công)
-                // Nếu sai mật khẩu hoặc user không tồn tại, nó sẽ tự ném ra
-                // BadCredentialsException
+                // xác thực thông qua spring security authenticationmanager, tự động ném badcredentialsexception nếu thất bại
                 authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(
                                                 request.getUsername(),
                                                 request.getPassword()));
 
-                // 2. Tìm user (đã chắc chắn đúng thông tin sau khi pass bước 1)
-                User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
+        User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
-                // 3. Kiểm tra trạng thái hoạt động (Nếu làm chuẩn thì có thể đưa vào
-                // UserDetails.isEnabled() như bước 2)
+                // kiểm tra trạng thái kích hoạt của tài khoản
                 if (!user.getIsActive()) {
                         throw new RuntimeException("Tài khoản đã bị khóa");
                 }
 
-                // 4. Tạo extra claims để ném thêm thông tin hữu ích vào payload của JWT
-                Map<String, Object> extraClaims = new HashMap<>();
+        Map<String, Object> extraClaims = new HashMap<>();
                 extraClaims.put("role", user.getRole().name());
                 extraClaims.put("userId", user.getId());
 
-                // 5. Sinh JWT Token và Refresh Token
-                String token = jwtUtil.generateToken(extraClaims, user);
+        String token = jwtUtil.generateToken(extraClaims, user);
                 String refreshTokenStr = jwtUtil.generateRefreshToken();
                 
-                // Xóa refresh token cũ (tuỳ chọn: để 1 user chỉ có 1 session tại 1 thời điểm)
+                // vô hiệu hóa các session cũ để đảm bảo 1 tài khoản chỉ có 1 session hoạt động tại một thời điểm
                 refreshTokenRepository.deleteByUser_Id(user.getId());
                 
-                // Lưu Refresh Token
-                RefreshToken refreshToken = RefreshToken.builder()
+        RefreshToken refreshToken = RefreshToken.builder()
                         .user(user)
                         .token(refreshTokenStr)
                         .expiryDate(new Date(System.currentTimeMillis() + jwtUtil.getRefreshExpiration()))
                         .build();
                 refreshTokenRepository.save(refreshToken);
 
-                // 6. Trả về Response
-                return AuthResponse.builder()
+        return AuthResponse.builder()
                                 .token(token)
                                 .refreshToken(refreshTokenStr)
                                 .userId(user.getId())
@@ -101,15 +92,12 @@ public class AuthServiceImpl implements AuthService {
         @Override
         @Transactional(readOnly = true)
         public MeResponse getMe() {
-                // 1. Lấy thông tin xác thực từ SecurityContext (do JwtAuthFilter đã đẩy vào)
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                String username = authentication.getName(); // Đây chính là số điện thoại
+                String username = authentication.getName();
 
-                // 2. Query DB để lấy thực thể User
                 User user = userRepository.findByUsernameOrEmail(username, username)
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
-                // 3. Xây dựng thông tin Profile tùy theo Role
                 Object profile = null;
 
                 if (user.getRole() == Role.TEACHER && user.getTeacherProfile() != null) {
@@ -123,7 +111,7 @@ public class AuthServiceImpl implements AuthService {
                                         .build();
                 } else if (user.getRole() == Role.PARENT && user.getParentProfile() != null) {
                         var parent = user.getParentProfile();
-                        var childDtos = parent.getChildren().stream() // Danh sách con của Parent [cite: 109, 444]
+                        var childDtos = parent.getChildren().stream()
                                         .map(child -> ChildDto.builder()
                                                         .childId(child.getId())
                                                         .fullName(child.getFullName())
@@ -140,9 +128,6 @@ public class AuthServiceImpl implements AuthService {
                                         .children(childDtos)
                                         .build();
                 }
-                // Nếu là ADMIN thì profile có thể để null hoặc tạo một AdminDto riêng nếu cần
-
-                // 4. Trả về kết quả
                 return MeResponse.builder()
                                 .userId(user.getId())
                                 .username(user.getUsername())
@@ -155,20 +140,16 @@ public class AuthServiceImpl implements AuthService {
 
         @Override
         public void changePassword(ChangePasswordRequest request) {
-                // Lấy thông tin người dùng đang đăng nhập từ SecurityContext
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 String username = authentication.getName();
 
-                // Tìm user trong Database
                 User user = userRepository.findByUsernameOrEmail(username, username)
                                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
-                // Kiểm tra mật khẩu cũ có khớp với mật khẩu đã hash trong DB không
                 if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
                         throw new RuntimeException("Mật khẩu cũ không chính xác");
                 }
 
-                // Băm mật khẩu mới và cập nhật xuống Database
                 user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
                 user.setRequiresPasswordChange(false);
                 userRepository.save(user);
@@ -178,10 +159,9 @@ public class AuthServiceImpl implements AuthService {
         @Transactional
         public void logout(String token) {
                 if (tokenBlacklistRepository.existsByToken(token)) {
-                        return; // Already blacklisted
+                        return;
                 }
                 
-                // Xoá Refresh Token và Push Token của user hiện tại
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication != null && authentication.getName() != null) {
                     User user = userRepository.findByUsernameOrEmail(authentication.getName(), authentication.getName()).orElse(null);
@@ -218,10 +198,9 @@ public class AuthServiceImpl implements AuthService {
             
             String accessToken = jwtUtil.generateToken(extraClaims, user);
             
-            // Xóa Refresh Token cũ để tránh bị sử dụng lại (Cơ chế Refresh Token Rotation)
+            // thu hồi refresh token cũ để triển khai cơ chế refresh token rotation, ngăn chặn tấn công replay
             refreshTokenRepository.delete(refreshToken);
 
-            // Tạo Refresh Token mới
             String newRefreshTokenStr = jwtUtil.generateRefreshToken();
             RefreshToken newRefreshToken = RefreshToken.builder()
                     .user(user)

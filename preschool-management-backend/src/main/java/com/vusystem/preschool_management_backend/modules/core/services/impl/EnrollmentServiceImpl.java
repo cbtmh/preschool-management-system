@@ -42,7 +42,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional
     public EnrollmentResponse enrollChild(EnrollmentRequest request) {
-        // 1. Kiểm tra tồn tại của Học sinh, Lớp học và Năm học
         Child child = childRepository.findById(request.getChildId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + request.getChildId()));
 
@@ -52,14 +51,13 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         AcademicYear academicYear = academicYearRepository.findById(request.getAcademicYearId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy năm học với ID: " + request.getAcademicYearId()));
                 checkClassCapacity(schoolClass, request.isForceEnrollment());
-        // 2. RÀNG BUỘC CỐT LÕI: Học sinh không thể học 2 lớp trong cùng 1 năm
+        // ràng buộc cốt lõi: học sinh không thể học 2 lớp trong cùng 1 năm
         if (enrollmentRepository.existsByChildIdAndAcademicYearId(child.getId(), academicYear.getId())) {
             throw new RuntimeException("Học sinh này đã được xếp vào một lớp khác trong năm học này!");
         }
-        // 3. Tạo bản ghi Xếp lớp
         Enrollment enrollment = Enrollment.builder()
                 .child(child)
-                .schoolClass(schoolClass) // Hoặc .classes(schoolClass) tùy vào tên biến em đặt trong Entity
+                .schoolClass(schoolClass)
                 .academicYear(academicYear)
                 .enrollmentDate(request.getEnrollmentDate() != null ? request.getEnrollmentDate() : LocalDate.now())
                 .status(EnrollmentStatus.STUDYING)
@@ -68,38 +66,32 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         enrollment = enrollmentRepository.save(enrollment);
 
-        // 4. Cập nhật trạng thái của học sinh thành STUDYING (Đang học)
-        // Nếu trước đó bé đang ở trạng thái RESERVED (Bảo lưu) hoặc mới vào
         if (child.getStatus() != StudentStatus.STUDYING) {
             child.setStatus(StudentStatus.STUDYING);
             childRepository.save(child);
         }
 
-        // 5. Trả về kết quả
         return mapToResponse(enrollment);
     }
 
     @Override
     public List<EnrollmentResponse> getStudentsInClass(Long classId) {
-        // Kiểm tra lớp có tồn tại không
         if (!schoolClassRepository.existsById(classId)) {
             throw new RuntimeException("Không tìm thấy lớp học với ID: " + classId);
         }
 
-        // Lấy danh sách enrollment và map sang DTO
-        List<Enrollment> enrollments = enrollmentRepository.findBySchoolClassId(classId); // Hoặc findByClassesId
+        List<Enrollment> enrollments = enrollmentRepository.findBySchoolClassId(classId);
         return enrollments.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    // --- Hàm Helper để Map từ Entity sang DTO ---
     private EnrollmentResponse mapToResponse(Enrollment enrollment) {
         return EnrollmentResponse.builder()
                 .id(enrollment.getId())
                 .childId(enrollment.getChild().getId())
                 .childName(enrollment.getChild().getFullName())
-                .classId(enrollment.getSchoolClass().getId()) // Thay getSchoolClass() bằng tên getter thực tế của em
+                .classId(enrollment.getSchoolClass().getId())
                 .className(enrollment.getSchoolClass().getName())
                 .academicYearId(enrollment.getAcademicYear().getId())
                 .academicYearName(enrollment.getAcademicYear().getName())
@@ -112,36 +104,31 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional
     public EnrollmentResponse transferClass(Long childId, TransferClassRequest request) {
-        // 1. Tìm học sinh
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + childId));
 
-        // 2. Tìm hồ sơ nhập học đang active (STUDYING)
         Optional<Enrollment> currentEnrollmentOpt = enrollmentRepository.findByChildIdAndStatus(childId, EnrollmentStatus.STUDYING);
 
-        // 3. Lấy thông tin lớp mới
         SchoolClass newClass = schoolClassRepository.findById(request.getNewClassId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học mới."));
         checkClassCapacity(newClass, request.isForceEnrollment());
 
         if (currentEnrollmentOpt.isPresent()) {
             Enrollment currentEnrollment = currentEnrollmentOpt.get();
-            // Validate: Lớp mới phải cùng năm học với lớp cũ
+            // lớp mới phải cùng năm học với lớp cũ
             if (!newClass.getAcademicYear().getId().equals(currentEnrollment.getAcademicYear().getId())) {
                 throw new RuntimeException("Lỗi logic: Không thể chuyển sang lớp của một năm học khác.");
             }
             
-            // Validate: Không được chuyển vào chính lớp cũ
+            // không được chuyển vào chính lớp cũ
             if (newClass.getId().equals(currentEnrollment.getSchoolClass().getId())) {
                 throw new RuntimeException("Học sinh đang học tại lớp này, không thể chuyển.");
             }
 
-            // Cập nhật hồ sơ cũ thành DROPPED 
             currentEnrollment.setStatus(EnrollmentStatus.DROPPED);
             currentEnrollment.setNotes("Chuyển sang lớp: " + newClass.getName() + ". Lý do: " + request.getNote());
             enrollmentRepository.save(currentEnrollment);
 
-            // Tạo hồ sơ nhập học mới
             Enrollment newEnrollment = Enrollment.builder()
                     .child(child)
                     .schoolClass(newClass)
@@ -153,7 +140,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
             return mapToResponse(enrollmentRepository.save(newEnrollment)); 
         } else {
-            // Chưa có lớp -> Xếp lớp mới
             Enrollment newEnrollment = Enrollment.builder()
                     .child(child)
                     .schoolClass(newClass)
@@ -174,11 +160,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional
     public void dropOut(Long childId, DropOutRequest request) {
-        // 1. Tìm học sinh [cite: 151, 152]
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + childId));
 
-        // 2. Cập nhật trạng thái lớp học hiện tại (nếu có) thành DROPPED 
         Optional<Enrollment> currentEnrollmentOpt = enrollmentRepository.findByChildIdAndStatus(childId, EnrollmentStatus.STUDYING);
         if (currentEnrollmentOpt.isPresent()) {
             Enrollment currentEnrollment = currentEnrollmentOpt.get();
@@ -187,38 +171,32 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             enrollmentRepository.save(currentEnrollment);
         }
 
-        // 3. Cập nhật trạng thái của học sinh thành RESERVED (Bảo lưu/Thôi học) 
         child.setStatus(StudentStatus.RESERVED);
         childRepository.save(child);
     }
 
     private void checkClassCapacity(SchoolClass schoolClass, boolean forceEnrollment) {
         int maxCapacity = schoolClass.getMaxCapacity();
-        // Đếm sĩ số hiện tại (chỉ đếm các bé đang học - STUDYING)
         int currentCount = enrollmentRepository.countBySchoolClassIdAndStatus(schoolClass.getId(), EnrollmentStatus.STUDYING);
 
-        // 1. Check Hard Limit (Không bao giờ được vượt qua giới hạn cứng)
+        // kiểm tra giới hạn sức chứa cứng (hard limit) không bao giờ được vượt qua
         int absoluteMax = maxCapacity + HARD_LIMIT_OVERFLOW;
         if (currentCount >= absoluteMax) {
             throw new RuntimeException("Lớp đã đạt giới hạn sức chứa tối đa tuyệt đối (" + absoluteMax + " trẻ). Hệ thống từ chối thêm học sinh.");
         }
 
-        // 2. Check Soft Limit (Vượt quá chuẩn nhưng chưa tới Hard Limit)
+        // kiểm tra giới hạn mềm (soft limit), cho phép vượt nếu admin xác nhận force_enrollment
         if (currentCount >= maxCapacity && !forceEnrollment) {
             throw new RuntimeException("Lớp đã đạt sĩ số chuẩn (" + maxCapacity + " trẻ). Bạn có chắc chắn muốn thêm ngoại lệ không?");
-            // (Lưu ý cho FE: Khi FE nhận câu thông báo này có thể pop-up hỏi người dùng. 
-            // Nếu người dùng ấn "Đồng ý", FE gọi lại API với forceEnrollment = true)
         }
     }
 
     @Override
     @Transactional
     public void promoteStudents(ClassPromotionRequest request) {
-        // 1. Kiểm tra Lớp mới có tồn tại không
         SchoolClass newClass = schoolClassRepository.findById(request.getNewClassId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học mới với ID: " + request.getNewClassId()));
 
-        // 2. Lấy danh sách Enrollment hiện tại của các bé được chọn ở lớp cũ
         List<Enrollment> oldEnrollments = enrollmentRepository.findActiveEnrollmentsByClassAndChildren(
                 request.getOldClassId(), request.getChildIds()
         );
@@ -229,17 +207,14 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         List<Enrollment> newEnrollments = new ArrayList<>();
 
-        // 3. Xử lý từng bé
         for (Enrollment oldEnrollment : oldEnrollments) {
-            // Đóng Enrollment cũ (Chuyển thành COMPLETED)
             oldEnrollment.setStatus(EnrollmentStatus.COMPLETED);
             oldEnrollment.setNotes("Đã hoàn thành để lên lớp mới");
 
-            // Tạo Enrollment mới cho lớp mới
             Enrollment newEnrollment = Enrollment.builder()
                     .child(oldEnrollment.getChild())
                     .schoolClass(newClass)
-                    .academicYear(newClass.getAcademicYear()) // Lấy theo năm học của lớp mới
+                    .academicYear(newClass.getAcademicYear())
                     .enrollmentDate(LocalDate.now())
                     .status(EnrollmentStatus.STUDYING)
                     .build();
@@ -247,7 +222,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             newEnrollments.add(newEnrollment);
         }
 
-        // 4. Lưu tất cả thay đổi xuống Database (Cả cũ lẫn mới)
         enrollmentRepository.saveAll(oldEnrollments);
         enrollmentRepository.saveAll(newEnrollments);
     }
@@ -255,11 +229,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional
     public void graduateClass(Long classId) {
-        // 1. Kiểm tra lớp học có tồn tại không
         SchoolClass schoolClass = schoolClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + classId));
 
-        // 2. Lấy danh sách học sinh đang học trong lớp này
         List<Enrollment> activeEnrollments = enrollmentRepository.findActiveEnrollmentsByClassId(classId);
 
         if (activeEnrollments.isEmpty()) {
@@ -268,20 +240,16 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         List<Child> graduatingChildren = new ArrayList<>();
 
-        // 3. Xử lý cập nhật trạng thái
         for (Enrollment enrollment : activeEnrollments) {
-            // Bước 3.1: Đóng hồ sơ lớp hiện tại
             enrollment.setStatus(EnrollmentStatus.COMPLETED);
             enrollment.setNotes("Đã tốt nghiệp (Hoàn thành chương trình mầm non)");
 
-            // Bước 3.2: Đổi trạng thái gốc của học sinh thành "Vào tiểu học"
             Child child = enrollment.getChild();
             child.setStatus(StudentStatus.ENTRANCE_PRIMARY);
             
             graduatingChildren.add(child);
         }
 
-        // 4. Lưu hàng loạt xuống Database
         enrollmentRepository.saveAll(activeEnrollments);
         childRepository.saveAll(graduatingChildren);
     }
@@ -294,7 +262,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         AcademicYear academicYear = academicYearRepository.findById(academicYearId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy năm học với ID: " + academicYearId));
 
-        // Chặn xếp lớp cho các năm học trong quá khứ (đã kết thúc) để bảo vệ dữ liệu lịch sử
+        // chặn xếp lớp cho các năm học trong quá khứ để bảo vệ tính toàn vẹn của dữ liệu lịch sử
         if (academicYear.getEndDate().isBefore(LocalDate.now())) {
             throw new RuntimeException("Năm học này đã qua nên không thể tiến hành xếp lớp nữa");
         }

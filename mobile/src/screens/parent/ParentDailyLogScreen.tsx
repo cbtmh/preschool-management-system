@@ -76,7 +76,7 @@ export default function ParentDailyLogScreen() {
       else if (log.attendanceStatus === 'ABSENT_EXCUSED') dotColor = '#f59e0b';
       else if (log.attendanceStatus === 'ABSENT_UNEXCUSED') dotColor = '#ef4444';
 
-      // Fix timezone parsing issue with timestamp
+      // sửa lỗi lệch múi giờ
       const localDateStr = new Date(selectedDate.getTime() - selectedDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
       marks[log.date] = {
@@ -92,7 +92,7 @@ export default function ParentDailyLogScreen() {
   const generateWeekDates = () => {
     const today = new Date();
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // thứ hai
     const monday = new Date(today.setDate(diff));
     
     const dates = [];
@@ -103,13 +103,13 @@ export default function ParentDailyLogScreen() {
     }
     setWeekDates(dates);
     
-    // Set selected date to today, or Monday if today is not in this week somehow
+    // chọn ngày hiện tại hoặc thứ 2
     const actualToday = new Date();
     const isThisWeek = dates.some(d => d.getDate() === actualToday.getDate() && d.getMonth() === actualToday.getMonth());
     if (isThisWeek) {
       setSelectedDate(actualToday);
     } else {
-      setSelectedDate(dates[0]); // fallback to monday
+      setSelectedDate(dates[0]); // mặc định là thứ 2
     }
   };
 
@@ -125,7 +125,7 @@ export default function ParentDailyLogScreen() {
       console.error('Error loading initial data:', error);
     } finally {
       if (selectedChildId) {
-        // fetchDailyLog will be triggered by useEffect
+
       } else {
         setLoading(false);
       }
@@ -155,7 +155,7 @@ export default function ParentDailyLogScreen() {
 
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '--:--';
-    // Handle "HH:mm:ss" format
+
     return timeStr.substring(0, 5);
   };
 
@@ -361,7 +361,7 @@ export default function ParentDailyLogScreen() {
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 setSelectedDate(newDate);
-                // Also update the week scroll view if needed
+                // cập nhật lại danh sách ngày trong tuần
                 const monday = new Date(newDate);
                 const dayOfWeek = monday.getDay();
                 const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);

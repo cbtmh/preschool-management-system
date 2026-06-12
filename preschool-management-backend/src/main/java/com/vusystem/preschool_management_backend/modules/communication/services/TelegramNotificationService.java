@@ -67,7 +67,7 @@ public class TelegramNotificationService {
                 restTemplate.postForObject(url, request, String.class);
                 System.out.println("Successfully sent telegram alert for incident: " + title);
                 
-                // Send images if available
+                // đính kèm hình ảnh nếu có
                 if (imageUrls != null && !imageUrls.isEmpty()) {
                     String photoApiUrl = "https://api.telegram.org/bot" + botToken + "/sendPhoto";
                     for (String imgUrl : imageUrls) {

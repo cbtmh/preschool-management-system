@@ -15,7 +15,7 @@ export default function TeacherAllergyScreen() {
   const [selectedClass, setSelectedClass] = useState<SchoolClassResponse | null>(null);
   const [students, setStudents] = useState<ChildHealthSummaryDto[]>([]);
   
-  // Allergy Edit Modal State
+
   const [showAllergyModal, setShowAllergyModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<ChildHealthSummaryDto | null>(null);
   const [editingAllergies, setEditingAllergies] = useState<AllergyRequest[]>([]);
@@ -29,8 +29,8 @@ export default function TeacherAllergyScreen() {
       
       const classList = await teacherService.getClassesByTeacherId(meData.profile.teacherId);
       
-      // Filter for current year classes implicitly if there's a property, or just take them all.
-      // Assuming they are sorted or we just display the classes
+      // lấy danh sách lớp của năm hiện tại
+
       setClasses(classList);
       
       if (classList.length > 0) {
@@ -127,8 +127,6 @@ export default function TeacherAllergyScreen() {
         <Text style={styles.headerTitle}>Quản lý dị ứng</Text>
         <View style={styles.placeholder} />
       </View>
-
-      {/* Class Selector */}
       {classes.length > 1 && (
         <View style={styles.classSelector}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -165,7 +163,6 @@ export default function TeacherAllergyScreen() {
           contentContainerStyle={styles.content}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#e11d48']} />}
         >
-          {/* Summary / Total section */}
           {selectedClass && (
              <View style={styles.summaryCard}>
                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
@@ -180,8 +177,6 @@ export default function TeacherAllergyScreen() {
                </Text>
              </View>
           )}
-
-          {/* Students With Allergies */}
           <Text style={styles.sectionTitle}>Trẻ có dị ứng ({studentsWithAllergies.length})</Text>
           {studentsWithAllergies.length === 0 ? (
             <Text style={styles.emptyText}>Không có trẻ nào có dị ứng.</Text>
@@ -217,8 +212,6 @@ export default function TeacherAllergyScreen() {
               </View>
             ))
           )}
-
-          {/* Students Without Allergies / Undeclared */}
           <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Không dị ứng / Chưa khai báo ({studentsWithoutAllergies.length})</Text>
           {studentsWithoutAllergies.length === 0 ? (
             <Text style={styles.emptyText}>Tất cả trẻ đều có dị ứng.</Text>
@@ -244,8 +237,6 @@ export default function TeacherAllergyScreen() {
           )}
         </ScrollView>
       )}
-
-      {/* Edit Allergy Modal */}
       {showAllergyModal && selectedStudent && (
         <View style={StyleSheet.absoluteFillObject}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>

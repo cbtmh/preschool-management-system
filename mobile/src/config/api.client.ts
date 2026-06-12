@@ -10,10 +10,9 @@ const axiosInstance = axios.create({
   }
 });
 
-// Add interceptor to include the auth token
+
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Break require cycle by requiring store dynamically inside the interceptor
     const { store } = require('../store');
     const token = store.getState().auth.token;
     if (token) {
@@ -40,7 +39,7 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Add response interceptor to handle unauthorized access (Silent Refresh)
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -71,7 +70,6 @@ axiosInstance.interceptors.response.use(
         originalRequest._retry = true;
         isRefreshing = true;
 
-        // Break require cycle by requiring store dynamically
         const { store } = require('../store');
         const { logout, updateTokens } = require('../store/slices/authSlice');
 
@@ -84,7 +82,7 @@ axiosInstance.interceptors.response.use(
         }
 
         try {
-          // Dùng axios thô để tránh vòng lặp import (circular dependency) với auth.service
+          // sử dụng axios thô để tránh lỗi vòng lặp import với auth.service
           const res = await axios.post(`${API_URL}/auth/refresh-token`, {
             refreshToken,
           });

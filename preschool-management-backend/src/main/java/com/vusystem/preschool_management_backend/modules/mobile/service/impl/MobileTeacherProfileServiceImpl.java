@@ -31,7 +31,7 @@ public class MobileTeacherProfileServiceImpl implements MobileTeacherProfileServ
         User user = teacher.getUser();
         String newToken = null;
 
-        // Cập nhật sđt (username) nếu có thay đổi
+        // vì hệ thống dùng số điện thoại làm username để đăng nhập, nên khi đổi sđt phải kiểm tra trùng lặp
         if (!currentUsername.equals(request.getPhone())) {
             if (userRepository.existsByUsername(request.getPhone())) {
                 throw new RuntimeException("Số điện thoại đã được đăng ký bởi tài khoản khác!");
@@ -39,11 +39,10 @@ public class MobileTeacherProfileServiceImpl implements MobileTeacherProfileServ
             user.setUsername(request.getPhone());
             userRepository.save(user);
 
-            // Tạo lại token mới vì username thay đổi
+            // cấp phát lại jwt token để app không bị văng ra ngoài sau khi đổi số điện thoại
             newToken = jwtUtil.generateToken(user);
         }
 
-        // Cập nhật thông tin cá nhân
         teacher.setFullName(request.getFullName());
         teacher.setAddress(request.getAddress());
         teacherRepository.save(teacher);

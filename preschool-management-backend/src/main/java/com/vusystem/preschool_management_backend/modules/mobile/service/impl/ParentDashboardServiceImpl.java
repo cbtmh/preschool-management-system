@@ -40,20 +40,16 @@ public class ParentDashboardServiceImpl implements ParentDashboardService {
 
     @Override
     public ParentDashboardResponse getDashboardData(String username) {
-        // 1. Lấy thông tin phụ huynh
         Parent parent = parentRepository.findByUserUsername(username)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ phụ huynh"));
 
-        // 2. Chuyển đổi danh sách con sang DTO
         List<ChildSummaryDTO> childrenDto = parent.getChildren().stream()
                 .map(this::mapToChildSummary)
                 .collect(Collectors.toList());
 
-        // 3. Lấy top 3 tin tức mới nhất
         Page<NewsDto> newsPage = newsService.getPublishedNews(PageRequest.of(0, 3));
         List<NewsDto> recentNews = newsPage.getContent();
 
-        // 4. Trả về response
         return ParentDashboardResponse.builder()
                 .children(childrenDto)
                 .recentNews(recentNews)
@@ -69,7 +65,7 @@ public class ParentDashboardServiceImpl implements ParentDashboardService {
         User user = parent.getUser();
         String newToken = null;
 
-        // Cập nhật sđt (username) nếu có thay đổi
+        // vì hệ thống dùng số điện thoại làm username để đăng nhập, nên khi đổi sđt phải kiểm tra trùng lặp
         if (!currentUsername.equals(request.getPhone())) {
             if (userRepository.existsByUsername(request.getPhone())) {
                 throw new RuntimeException("Số điện thoại đã được đăng ký bởi tài khoản khác!");
@@ -77,11 +73,10 @@ public class ParentDashboardServiceImpl implements ParentDashboardService {
             user.setUsername(request.getPhone());
             userRepository.save(user);
             
-            // Tạo lại token mới vì username thay đổi
+            // cấp phát lại jwt token để app không bị văng ra ngoài sau khi đổi số điện thoại
             newToken = jwtUtil.generateToken(user);
         }
 
-        // Cập nhật thông tin cá nhân
         parent.setFullName(request.getFullName());
         parent.setAddress(request.getAddress());
         parentRepository.save(parent);

@@ -24,7 +24,7 @@ export default function TeacherMedicationScreen() {
   const generateWeekDates = (baseDate: Date) => {
     const today = new Date(baseDate);
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // tính từ thứ hai
     const monday = new Date(today.setDate(diff));
     
     const dates = [];
@@ -106,7 +106,6 @@ export default function TeacherMedicationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -119,7 +118,6 @@ export default function TeacherMedicationScreen() {
           <Ionicons name="calendar-outline" size={24} color="#0ea5e9" />
         </TouchableOpacity>
       </View>
-      {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
           {weekDates.map((date, index) => {

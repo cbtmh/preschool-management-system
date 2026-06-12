@@ -131,7 +131,7 @@ export default function DailyLogScreen() {
     const newDate = new Date(date);
     newDate.setDate(newDate.getDate() + days);
     setDate(newDate);
-    // If the new date is outside current weekDates, regenerate week dates
+    // nếu ngày mới nằm ngoài tuần hiện tại thì tạo lại danh sách ngày
     const isOutsideWeek = !weekDates.some(d => d.getDate() === newDate.getDate() && d.getMonth() === newDate.getMonth());
     if (isOutsideWeek) {
       generateWeekDates(newDate);
@@ -254,15 +254,12 @@ export default function DailyLogScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Date Navigation */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Nhật ký hằng ngày</Text>
         <TouchableOpacity onPress={() => setShowHistoryModal(true)} style={styles.dateBtn}>
           <Ionicons name="calendar-outline" size={24} color="#3b82f6" />
         </TouchableOpacity>
       </View>
-
-      {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
           {weekDates.map((d, index) => {
@@ -285,8 +282,6 @@ export default function DailyLogScreen() {
           })}
         </ScrollView>
       </View>
-
-      {/* Class Selector */}
       {filteredClasses.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classSelector}>
           {filteredClasses.map(cls => (
@@ -308,8 +303,6 @@ export default function DailyLogScreen() {
           ))}
         </ScrollView>
       )}
-
-      {/* Main Tabs */}
       <View style={styles.mainTabs}>
         <TouchableOpacity style={[styles.mainTab, activeTab === 'meal' && styles.mainTabActive]} onPress={() => setActiveTab('meal')}>
           <Text style={[styles.mainTabText, activeTab === 'meal' && styles.mainTabTextActive]}>🍽️ Ăn uống</Text>
@@ -321,8 +314,6 @@ export default function DailyLogScreen() {
           <Text style={[styles.mainTabText, activeTab === 'notes' && styles.mainTabTextActive]}>📝 Ghi chú</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Action Bar */}
       {!loading && totalPresent > 0 && (
         <View style={styles.actionBar}>
           <View style={styles.progressContainer}>
@@ -340,8 +331,6 @@ export default function DailyLogScreen() {
           )}
         </View>
       )}
-
-      {/* Student List */}
       <KeyboardAwareScrollView 
         style={styles.listContainer} 
         contentContainerStyle={styles.scrollContent}
@@ -378,8 +367,6 @@ export default function DailyLogScreen() {
             })
           )}
       </KeyboardAwareScrollView>
-
-      {/* Save Button */}
       {!loading && presentStudents.length > 0 && (
         <View style={styles.footer}>
           <TouchableOpacity 

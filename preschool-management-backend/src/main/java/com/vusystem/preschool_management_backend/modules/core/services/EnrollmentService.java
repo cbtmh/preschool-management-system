@@ -12,10 +12,8 @@ import com.vusystem.preschool_management_backend.modules.core.dto.response.AutoE
 
 public interface EnrollmentService {
 
-    // Nghiệp vụ 1: Xếp một học sinh vào lớp
     EnrollmentResponse enrollChild(EnrollmentRequest request);
 
-    // Nghiệp vụ 2: Lấy danh sách toàn bộ học sinh của một lớp (để hiển thị)
     List<EnrollmentResponse> getStudentsInClass(Long classId);
 
     EnrollmentResponse transferClass(Long childId, TransferClassRequest request);

@@ -35,7 +35,7 @@ public class CloudinaryService {
         }
     }
     
-    // Thêm hàm xóa ảnh nếu cần
+    // hàm tiện ích hỗ trợ xóa file trên mây nếu cần dọn dẹp dung lượng
     public void deleteImage(String publicId) {
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());

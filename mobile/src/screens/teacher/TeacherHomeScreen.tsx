@@ -22,7 +22,7 @@ export default function TeacherHomeScreen({ navigation }: any) {
     try {
       setLoading(true);
       setError(null);
-      // Get teacher profile
+      // lấy thông tin giáo viên
       const meData = await teacherService.getMe();
 
       if (!meData?.profile?.teacherId) {
@@ -30,7 +30,7 @@ export default function TeacherHomeScreen({ navigation }: any) {
       }
       setTeacherInfo(meData);
 
-      // Get assigned classes
+      // lấy danh sách lớp được phân công
       const classList = await teacherService.getClassesByTeacherId(meData.profile.teacherId);
       setClasses(classList);
       
@@ -78,8 +78,6 @@ export default function TeacherHomeScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {/* Header Section */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()},</Text>
@@ -91,8 +89,6 @@ export default function TeacherHomeScreen({ navigation }: any) {
             </Text>
           </View>
         </View>
-
-        {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Tiện ích nhanh</Text>
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity 
@@ -116,16 +112,6 @@ export default function TeacherHomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#fdf4ff' }]}
-            onPress={() => navigation.navigate('TeacherHealth')}
-          >
-            <View style={[styles.iconBox, { backgroundColor: '#f5d0fe' }]}>
-              <Text style={styles.iconText}>❤️</Text>
-            </View>
-            <Text style={styles.actionTitle}>Sức khỏe</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
             style={[styles.actionCard, { backgroundColor: '#fff7ed', marginTop: 16 }]}
             onPress={() => navigation.navigate('TeacherMenu')}
           >
@@ -146,27 +132,15 @@ export default function TeacherHomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#fff1f2', marginTop: 16 }]}
-            onPress={() => navigation.navigate('TeacherAllergy')}
+            style={[styles.actionCard, { backgroundColor: '#fdfce8', marginTop: 16 }]}
+            onPress={() => navigation.navigate('TeacherLeaveRequest')}
           >
-            <View style={[styles.iconBox, { backgroundColor: '#ffe4e6' }]}>
-              <Text style={styles.iconText}>🥜</Text>
+            <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}>
+              <Text style={styles.iconText}>📩</Text>
             </View>
-            <Text style={styles.actionTitle}>Dị ứng</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#eff6ff', marginTop: 16 }]}
-            onPress={() => navigation.navigate('TeacherIncident')}
-          >
-            <View style={[styles.iconBox, { backgroundColor: '#dbeafe' }]}>
-              <Text style={styles.iconText}>⚠️</Text>
-            </View>
-            <Text style={styles.actionTitle}>Tường trình</Text>
+            <Text style={styles.actionTitle}>Đơn xin nghỉ</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Academic Year Selector */}
         {academicYears.length > 1 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearSelector} contentContainerStyle={styles.yearSelectorContent}>
             {academicYears.map(year => (
@@ -188,8 +162,6 @@ export default function TeacherHomeScreen({ navigation }: any) {
             ))}
           </ScrollView>
         )}
-
-        {/* My Classes Section */}
         <View style={styles.classesHeader}>
           <Text style={styles.sectionTitle}>Lớp học của tôi</Text>
           <Text style={styles.classCount}>{filteredClasses.length} Lớp</Text>
@@ -310,7 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   actionCard: {
-    width: (width - 60) / 3, // slightly adjust for gap
+    width: (width - 60) / 3, // điều chỉnh độ rộng
     padding: 12,
     borderRadius: 16,
     alignItems: 'center',
@@ -418,7 +390,7 @@ const styles = StyleSheet.create({
     maxHeight: 40,
   },
   yearSelectorContent: {
-    paddingRight: 20, // Add some padding so the last item isn't flush
+    paddingRight: 20, // thêm khoảng trống để item cuối không bị sát lề
   },
   yearTab: {
     paddingHorizontal: 16,

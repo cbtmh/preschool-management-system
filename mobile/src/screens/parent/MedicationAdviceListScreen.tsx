@@ -41,7 +41,7 @@ export default function MedicationAdviceListScreen() {
   const loadRequests = async () => {
     let currentChildId = childId;
     
-    // Nếu chưa có childId (đi từ màn hình Tiện ích)
+    // nếu chưa có childid (đi từ màn hình tiện ích)
     if (!currentChildId) {
       try {
         const dashboardData = await parentDashboardService.getDashboardData();
@@ -63,8 +63,7 @@ export default function MedicationAdviceListScreen() {
 
     try {
       const data = await medicationService.getParentRequests(currentChildId);
-      // Backend có thể trả về các status khác, nhưng UI cho phép chỉ quan tâm PENDING và COMPLETED
-      // Hoặc map màu tương ứng.
+
       setRequests(data);
     } catch (error) {
       console.log('Lỗi tải danh sách dặn thuốc:', error);
@@ -91,8 +90,8 @@ export default function MedicationAdviceListScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return '#22c55e'; // Green
-      default: return '#f59e0b'; // Yellow (PENDING or otherwise)
+      case 'COMPLETED': return '#22c55e';
+      default: return '#f59e0b';
     }
   };
 

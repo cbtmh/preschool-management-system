@@ -61,7 +61,6 @@ export default function TeacherHealthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -169,7 +168,7 @@ export default function TeacherHealthScreen() {
                 setShowHistoryModal(false);
               }}
               onMonthChange={(month: any) => {
-                // We can let them swipe without closing, but if they want to select they tap a day.
+
               }}
               theme={{
                 todayTextColor: '#0ea5e9',

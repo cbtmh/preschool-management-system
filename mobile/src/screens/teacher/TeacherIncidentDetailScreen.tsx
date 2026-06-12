@@ -93,7 +93,6 @@ export default function TeacherIncidentDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
@@ -103,7 +102,6 @@ export default function TeacherIncidentDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Title and Status */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Text style={styles.title} selectable>{incident.title}</Text>
@@ -121,8 +119,6 @@ export default function TeacherIncidentDetailScreen() {
             </View>
           </View>
         </View>
-
-        {/* Basic Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin chung</Text>
           <View style={styles.infoRow}>
@@ -143,8 +139,6 @@ export default function TeacherIncidentDetailScreen() {
             <Text style={styles.infoValue}>{incident.reportedByTeacherName}</Text>
           </View>
         </View>
-
-        {/* Involved Children */}
         {incident.involvedChildren && incident.involvedChildren.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Học sinh liên quan</Text>
@@ -163,16 +157,12 @@ export default function TeacherIncidentDetailScreen() {
             </View>
           </View>
         )}
-
-        {/* Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nội dung tường trình</Text>
           <View style={styles.descriptionBox}>
             <Text style={styles.descriptionText} selectable>{incident.description}</Text>
           </View>
         </View>
-
-        {/* Initial Handling */}
         {incident.initialHandling ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Cách xử lý ban đầu</Text>
@@ -181,8 +171,6 @@ export default function TeacherIncidentDetailScreen() {
             </View>
           </View>
         ) : null}
-
-        {/* Attached Images */}
         {incident.imageUrls && incident.imageUrls.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Hình ảnh đính kèm</Text>
@@ -193,8 +181,6 @@ export default function TeacherIncidentDetailScreen() {
             </ScrollView>
           </View>
         )}
-
-        {/* Principal Notes */}
         {incident.principalNotes ? (
           <View style={[styles.section, styles.principalSection]}>
             <Text style={[styles.sectionTitle, { color: '#0ea5e9' }]}>Hướng xử lý từ Ban Giám Hiệu</Text>

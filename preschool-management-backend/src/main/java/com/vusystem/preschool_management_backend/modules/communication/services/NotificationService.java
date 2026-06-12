@@ -43,6 +43,7 @@ public class NotificationService {
     private final SchoolClassRepository schoolClassRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ExpoPushService expoPushService;
+    private final TwilioSmsService twilioSmsService;
 
     @Transactional
     public void sendNotification(SendNotificationRequest request, Long senderId) {
@@ -103,12 +104,13 @@ public class NotificationService {
             notificationRecipientRepository.saveAll(notificationRecipients);
         }
 
-        // Send Push Notifications
+        // gửi push notification
         List<String> tokens = recipients.stream()
                 .map(User::getDeviceToken)
                 .filter(token -> token != null && !token.isEmpty())
                 .collect(Collectors.toList());
 
+        boolean pushSuccess = false;
         if (!tokens.isEmpty()) {
             Map<String, Object> data = new HashMap<>();
             data.put("notificationId", notification.getId().toString());
@@ -116,7 +118,15 @@ public class NotificationService {
                 data.put("referenceType", notification.getReferenceType());
                 data.put("referenceId", notification.getReferenceId() != null ? notification.getReferenceId().toString() : null);
             }
-            expoPushService.sendPushNotifications(tokens, notification.getTitle(), notification.getContent(), data);
+            pushSuccess = expoPushService.sendPushNotifications(tokens, notification.getTitle(), notification.getContent(), data);
+        }
+
+        // dự phòng gửi sms nếu push notification thất bại
+        for (User user : recipients) {
+            boolean hasToken = user.getDeviceToken() != null && !user.getDeviceToken().isEmpty();
+            if (!hasToken || !pushSuccess) {
+                twilioSmsService.sendSms(user.getUsername(), "[Cảnh báo] " + notification.getTitle() + ": " + notification.getContent());
+            }
         }
     }
 
@@ -150,7 +160,8 @@ public class NotificationService {
                 .build();
         notificationRecipientRepository.save(notificationRecipient);
 
-        // Send push notification
+        // gửi push notification
+        boolean pushSuccess = false;
         if (recipient.getDeviceToken() != null && !recipient.getDeviceToken().isEmpty()) {
             Map<String, Object> data = new HashMap<>();
             data.put("notificationId", notification.getId().toString());
@@ -158,7 +169,12 @@ public class NotificationService {
                 data.put("referenceType", referenceType);
                 data.put("referenceId", referenceId != null ? referenceId.toString() : null);
             }
-            expoPushService.sendPushNotifications(List.of(recipient.getDeviceToken()), title, content, data);
+            pushSuccess = expoPushService.sendPushNotifications(List.of(recipient.getDeviceToken()), title, content, data);
+        }
+
+        // dự phòng gửi sms nếu push notification thất bại
+        if (recipient.getDeviceToken() == null || recipient.getDeviceToken().isEmpty() || !pushSuccess) {
+            twilioSmsService.sendSms(recipient.getUsername(), "[Cảnh báo] " + title + ": " + content);
         }
     }
 

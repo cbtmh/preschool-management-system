@@ -23,11 +23,11 @@ export default function ParentMealRegistrationScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('DAILY');
   const [registrations, setRegistrations] = useState<MealRegistrationResponse[]>([]);
   
-  // Selection states
+
   const [selectedMonth, setSelectedMonth] = useState(dayjs().month() + 1);
   const [selectedYear, setSelectedYear] = useState(dayjs().year());
   
-  // Meal Types
+
   const [mealTypes, setMealTypes] = useState({
     BREAKFAST: true,
     LUNCH: true,
@@ -112,7 +112,7 @@ export default function ParentMealRegistrationScreen() {
   const handleDailySubmit = async (date: string, isRegistered: boolean) => {
     if (!currentChild) return;
 
-    // Check cutoff rule locally before sending to prevent unnecessary API calls
+    // kiểm tra điều kiện trước khi gửi
     const targetDate = dayjs(date);
     const today = dayjs();
     
@@ -153,20 +153,20 @@ export default function ParentMealRegistrationScreen() {
     setMealTypes(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
-  // Group registrations by date for Daily view
+  // nhóm các suất ăn đã đăng ký theo ngày
   const groupedRegistrations: Record<string, MealRegistrationResponse[]> = {};
   registrations.forEach(r => {
     if (!groupedRegistrations[r.date]) groupedRegistrations[r.date] = [];
     groupedRegistrations[r.date].push(r);
   });
   
-  // Create an array of days in the selected month for display
+  // tạo danh sách các ngày trong tháng để hiển thị
   const daysInMonth = Array.from(
     { length: dayjs(`${selectedYear}-${selectedMonth}-01`).daysInMonth() },
     (_, i) => dayjs(`${selectedYear}-${selectedMonth}-${i + 1}`).format('YYYY-MM-DD')
   ).filter(d => {
     const dayOfWeek = dayjs(d).day();
-    return dayOfWeek !== 0 && dayOfWeek !== 6; // Filter out weekends
+    return dayOfWeek !== 0 && dayOfWeek !== 6; // bỏ qua cuối tuần
   });
 
   return (
@@ -319,7 +319,7 @@ export default function ParentMealRegistrationScreen() {
                     
                     const dayRegs = groupedRegistrations[date] || [];
                     const isRegistered = dayRegs.some(r => r.status === 'REGISTERED');
-                    // Find which meals are registered
+                    // tìm xem đã đăng ký những bữa nào
                     const registeredMeals = dayRegs.filter(r => r.status === 'REGISTERED').map(r => r.mealType);
                     
                     return (

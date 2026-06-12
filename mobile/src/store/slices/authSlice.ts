@@ -47,7 +47,7 @@ export const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
       }
       state.role = action.payload.role;
-      // Persist to SecureStore asynchronously
+
       if (Platform.OS === 'web') {
         localStorage.setItem('token', action.payload.token);
         if (action.payload.refreshToken) localStorage.setItem('refreshToken', action.payload.refreshToken);
@@ -76,7 +76,7 @@ export const authSlice = createSlice({
       state.token = null;
       state.refreshToken = null;
       state.role = null;
-      // Clear SecureStore
+
       if (Platform.OS === 'web') {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');

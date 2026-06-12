@@ -32,5 +32,20 @@ export const leaveRequestService = {
       `/mobile/leave-requests/children/${childId}`
     );
     return response.data.data;
+  },
+
+  getClassRequests: async (classId: number): Promise<LeaveRequestResponse[]> => {
+    const response = await axiosInstance.get<{ status: number; message: string; data: LeaveRequestResponse[] }>(
+      `/mobile/leave-requests/classes/${classId}`
+    );
+    return response.data.data;
+  },
+
+  updateStatus: async (id: number, status: 'APPROVED' | 'REJECTED'): Promise<void> => {
+    await axiosInstance.put(
+      `/mobile/leave-requests/${id}/status`,
+      null,
+      { params: { status } }
+    );
   }
 };

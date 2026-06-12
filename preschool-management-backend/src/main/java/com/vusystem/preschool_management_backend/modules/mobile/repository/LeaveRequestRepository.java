@@ -20,4 +20,9 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             @org.springframework.data.repository.query.Param("classId") Long classId,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
+    @org.springframework.data.jpa.repository.Query("SELECT lr FROM LeaveRequest lr " +
+           "WHERE lr.child.id IN (SELECT e.child.id FROM com.vusystem.preschool_management_backend.common.entity.academic.Enrollment e WHERE e.schoolClass.id = :classId) " +
+           "ORDER BY lr.createdAt DESC")
+    List<LeaveRequest> findLeaveRequestsByClassIdOrderByCreatedAtDesc(@org.springframework.data.repository.query.Param("classId") Long classId);
 }

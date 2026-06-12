@@ -2,7 +2,6 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Import Screens
 import ParentHomeScreen from '../screens/parent/ParentHomeScreen';
 import ParentDailyLogScreen from '../screens/parent/ParentDailyLogScreen';
 import ParentServicesScreen from '../screens/parent/ParentServicesScreen';
@@ -56,7 +55,7 @@ export default function ParentTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#0ea5e9', // Primary pastel blue
+        tabBarActiveTintColor: '#0ea5e9',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           backgroundColor: '#ffffff',

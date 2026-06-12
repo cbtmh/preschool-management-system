@@ -183,7 +183,7 @@ export default function TeacherCreateIncidentScreen() {
             try {
               setSubmitting(true);
               
-              // Upload images
+              // tải ảnh lên
               const uploadedUrls: string[] = [];
               for (const uri of images) {
                 try {
@@ -206,7 +206,7 @@ export default function TeacherCreateIncidentScreen() {
               };
               
               await incidentService.createIncident(data);
-              await AsyncStorage.removeItem(DRAFT_KEY); // Clear draft on success
+              await AsyncStorage.removeItem(DRAFT_KEY); // xóa bản nháp sau khi thành công
               
               Alert.alert('Thành công', 'Bản tường trình đã được gửi đến BGH chờ xử lý.', [
                 { text: 'OK', onPress: () => navigation.goBack() }
@@ -225,7 +225,6 @@ export default function TeacherCreateIncidentScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={24} color="#0f172a" />
@@ -405,8 +404,6 @@ export default function TeacherCreateIncidentScreen() {
           </TouchableOpacity>
         </KeyboardAwareScrollView>
       )}
-
-      {/* Student Selection Modal */}
       <Modal visible={showStudentModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>

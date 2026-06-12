@@ -30,7 +30,7 @@ public class TeacherServiceImpl implements TeacherService {
 
     private final TeacherRepository teacherRepository;
     private final UserService userService;
-    private final UserRepository userRepository; // Inject thêm để xử lý soft delete
+    private final UserRepository userRepository; // inject thêm để xử lý soft delete account khi xóa teacher
     private final ClassTeacherRepository classTeacherRepository;
 
     @Override
@@ -46,7 +46,7 @@ public class TeacherServiceImpl implements TeacherService {
                 .user(savedUser)
                 .fullName(request.getFullName())
                 .dob(request.getDob())
-                .gender(parseGender(request.getGender())) // Dùng hàm helper an toàn
+                .gender(parseGender(request.getGender()))
                 .address(request.getAddress())
                 .build();
 
@@ -62,7 +62,7 @@ public class TeacherServiceImpl implements TeacherService {
 
         existingTeacher.setFullName(request.getFullName());
         existingTeacher.setDob(request.getDob());
-        existingTeacher.setGender(parseGender(request.getGender())); // Dùng hàm helper an toàn
+        existingTeacher.setGender(parseGender(request.getGender()));
         existingTeacher.setAddress(request.getAddress());
 
         User user = existingTeacher.getUser();
@@ -75,7 +75,7 @@ public class TeacherServiceImpl implements TeacherService {
             user.setEmail(null);
         }
         
-        userRepository.save(user); // Lưu sự thay đổi của User (email) vào DB
+        userRepository.save(user);
         Teacher updatedTeacher = teacherRepository.save(existingTeacher);
         return mapToResponse(updatedTeacher);
     }
@@ -89,10 +89,10 @@ public class TeacherServiceImpl implements TeacherService {
 
     @Override
     public List<TeacherResponse> getAllTeachers() {
-        // Lấy tất cả phân công lớp để tránh N+1 query
+        // lấy tất cả phân công lớp để tránh lỗi n+1 query
         List<ClassTeacher> allAssignments = classTeacherRepository.findAll();
         
-        // Chỉ map những lớp thuộc năm học HIỆN TẠI (isCurrent = true)
+        // chỉ map những lớp thuộc năm học hiện tại
         Map<Long, List<String>> teacherClassMap = allAssignments.stream()
                 .filter(ct -> ct.getSchoolClass().getAcademicYear().isCurrent())
                 .collect(Collectors.groupingBy(
@@ -103,7 +103,7 @@ public class TeacherServiceImpl implements TeacherService {
                         )
                 ));
 
-        // Dùng query lấy Active thay vì findAll()
+        // dùng query lấy active thay vì findall để ẩn các giáo viên đã nghỉ việc
         return teacherRepository.findAllActiveTeachers().stream()
                 .map(t -> {
                     TeacherResponse res = mapToResponse(t);
@@ -119,13 +119,12 @@ public class TeacherServiceImpl implements TeacherService {
         Teacher teacher = teacherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giáo viên với ID: " + id));
         
-        // Soft delete: Vô hiệu hóa tài khoản User thay vì xóa cứng Entity Teacher
+        // soft delete: vô hiệu hóa tài khoản user thay vì xóa cứng entity teacher để giữ toàn vẹn dữ liệu lịch sử
         User user = teacher.getUser();
         user.setIsActive(false); 
         userRepository.save(user); 
     }
 
-    // --- Helper Methods ---
     
     private Gender parseGender(String genderStr) {
         try {

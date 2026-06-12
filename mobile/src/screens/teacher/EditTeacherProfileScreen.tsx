@@ -42,10 +42,10 @@ export default function EditTeacherProfileScreen() {
       
       const response = await authService.updateTeacherProfile({ fullName, phone, address });
       
-      // Nếu số điện thoại thay đổi, Backend sẽ trả về Token mới
+      // nếu thay đổi số điện thoại thì lấy token mới
       if (response.data) {
         const newToken = response.data;
-        // Lưu token mới vào Store và SecureStore
+        // cập nhật token mới
         if (Platform.OS === 'web') {
           localStorage.setItem('token', newToken);
         } else {
@@ -69,7 +69,6 @@ export default function EditTeacherProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -100,7 +99,6 @@ export default function EditTeacherProfileScreen() {
           </View>
 
           <View style={styles.formContainer}>
-            {/* Full Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Họ và tên</Text>
               <View style={styles.inputContainer}>
@@ -113,8 +111,6 @@ export default function EditTeacherProfileScreen() {
                 />
               </View>
             </View>
-
-            {/* Phone */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Số điện thoại</Text>
               <View style={styles.inputContainer}>
@@ -128,8 +124,6 @@ export default function EditTeacherProfileScreen() {
                 />
               </View>
             </View>
-
-            {/* Address */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Địa chỉ</Text>
               <View style={[styles.inputContainer, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>

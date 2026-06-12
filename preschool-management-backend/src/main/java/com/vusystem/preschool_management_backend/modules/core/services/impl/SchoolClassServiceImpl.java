@@ -5,6 +5,7 @@ import com.vusystem.preschool_management_backend.common.entity.academic.SchoolCl
 import com.vusystem.preschool_management_backend.modules.core.dto.request.SchoolClassRequest;
 import com.vusystem.preschool_management_backend.modules.core.dto.response.SchoolClassResponse;
 import com.vusystem.preschool_management_backend.modules.core.repository.AcademicYearRepository;
+import com.vusystem.preschool_management_backend.modules.core.repository.EnrollmentRepository;
 import com.vusystem.preschool_management_backend.modules.core.repository.SchoolClassRepository;
 import com.vusystem.preschool_management_backend.modules.core.services.SchoolClassService;
 import lombok.RequiredArgsConstructor;
@@ -20,22 +21,20 @@ public class SchoolClassServiceImpl implements SchoolClassService {
 
     private final SchoolClassRepository schoolClassRepository;
     
-    // Inject thêm Repository của Năm học để Validate khóa ngoại
     private final AcademicYearRepository academicYearRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Override
     @Transactional
     public SchoolClassResponse createClass(SchoolClassRequest request) {
-        // 1. Kiểm tra xem năm học có tồn tại không
         AcademicYear academicYear = academicYearRepository.findById(request.getAcademicYearId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy năm học với ID: " + request.getAcademicYearId()));
 
-        // 2. Chặn lỗi logic: Không cho phép 2 lớp trùng tên trong CÙNG MỘT năm học
+        // chặn lỗi logic: không cho phép 2 lớp trùng tên trong cùng một năm học
         if (schoolClassRepository.existsByNameAndAcademicYearId(request.getName(), request.getAcademicYearId())) {
             throw new RuntimeException("Tên lớp '" + request.getName() + "' đã tồn tại trong năm học này");
         }
 
-        // 3. Chuyển đổi dữ liệu và lưu
         SchoolClass schoolClass = SchoolClass.builder()
                 .name(request.getName())
                 .ageGroup(request.getAgeGroup())
@@ -50,21 +49,18 @@ public class SchoolClassServiceImpl implements SchoolClassService {
     @Override
     @Transactional
     public SchoolClassResponse updateClass(Long id, SchoolClassRequest request) {
-        // 1. Tìm lớp học cần sửa
         SchoolClass existingClass = schoolClassRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + id));
 
-        // 2. Kiểm tra năm học mới có tồn tại không
         AcademicYear academicYear = academicYearRepository.findById(request.getAcademicYearId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy năm học với ID: " + request.getAcademicYearId()));
 
-        // 3. Kiểm tra trùng tên (nếu người dùng đổi tên lớp khác với tên hiện tại)
+        // kiểm tra trùng lặp tên lớp trong cùng năm học nếu có thay đổi tên
         if (!existingClass.getName().equals(request.getName()) &&
             schoolClassRepository.existsByNameAndAcademicYearId(request.getName(), request.getAcademicYearId())) {
             throw new RuntimeException("Tên lớp '" + request.getName() + "' đã tồn tại trong năm học này");
         }
 
-        // 4. Cập nhật dữ liệu
         existingClass.setName(request.getName());
         existingClass.setAgeGroup(request.getAgeGroup());
         existingClass.setAcademicYear(academicYear);
@@ -89,7 +85,7 @@ public class SchoolClassServiceImpl implements SchoolClassService {
 
     @Override
     public List<SchoolClassResponse> getClassesByAcademicYearId(Long academicYearId) {
-        // Kiểm tra năm học trước khi query để báo lỗi chuẩn xác nếu API bị gọi nhầm ID
+        // kiểm tra năm học trước khi query để báo lỗi chuẩn xác nếu request gởi sai academic_year_id
         if (!academicYearRepository.existsById(academicYearId)) {
             throw new RuntimeException("Không tìm thấy năm học với ID: " + academicYearId);
         }
@@ -105,13 +101,13 @@ public class SchoolClassServiceImpl implements SchoolClassService {
         SchoolClass schoolClass = schoolClassRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + id));
         
-        // TODO: Tương lai khi làm module Xếp lớp cho Học sinh, ta sẽ check thêm điều kiện: 
-        // "Nếu lớp đang có học sinh thì không được xóa". Hiện tại cứ xóa bình thường.
-        
+        // kiểm tra ràng buộc không cho xóa lớp nếu lớp đang có học sinh
+        if (!enrollmentRepository.findBySchoolClassId(id).isEmpty()) {
+            throw new RuntimeException("Không thể xóa lớp học vì đang có học sinh trong lớp");
+        }
         schoolClassRepository.delete(schoolClass);
     }
 
-    // --- Hàm hỗ trợ: Chuyển đổi từ Entity sang Response (Trải phẳng dữ liệu) ---
     private SchoolClassResponse mapToResponse(SchoolClass entity) {
         return SchoolClassResponse.builder()
                 .id(entity.getId())

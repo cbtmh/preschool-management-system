@@ -23,7 +23,7 @@ public class MealMenuServiceImpl implements MealMenuService {
     @Override
     @Transactional
     public MealMenuResponse createMealMenu(MealMenuRequest request) {
-        // Validate: Chặn tạo trùng 2 bữa giống nhau trong cùng 1 ngày
+        // ngăn chặn tạo thực đơn trùng lặp loại bữa ăn trong cùng một ngày
         if (mealMenuRepository.existsByDateAndMealType(request.getDate(), request.getMealType())) {
             throw new RuntimeException("Thực đơn cho bữa " + request.getMealType() + " ngày " + request.getDate() + " đã tồn tại.");
         }
@@ -45,7 +45,7 @@ public class MealMenuServiceImpl implements MealMenuService {
         MealMenu mealMenu = mealMenuRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thực đơn với ID: " + id));
 
-        // Nếu Admin đổi Ngày hoặc Loại bữa ăn -> Phải check xem có bị trùng với một Menu khác đang có không
+        // kiểm tra trùng lặp nếu có thay đổi ngày hoặc loại bữa ăn
         boolean isChangingDateOrType = !mealMenu.getDate().equals(request.getDate()) 
                                     || !mealMenu.getMealType().equals(request.getMealType());
         
@@ -94,7 +94,6 @@ public class MealMenuServiceImpl implements MealMenuService {
         mealMenuRepository.delete(mealMenu);
     }
 
-    // Helper method: Map từ Entity -> Response DTO
     private MealMenuResponse mapToResponse(MealMenu mealMenu) {
         return MealMenuResponse.builder()
                 .id(mealMenu.getId())

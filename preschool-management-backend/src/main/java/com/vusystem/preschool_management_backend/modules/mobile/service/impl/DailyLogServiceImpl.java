@@ -41,34 +41,31 @@ public class DailyLogServiceImpl implements DailyLogService {
     public List<DailyLogResponse> getDailyLogsForClass(Long classId, LocalDate date) {
         securityService.verifyTeacherTeachesClass(classId);
 
-        // 1. Lấy danh sách học sinh ĐANG HỌC trong lớp (từ bảng enrollments)
+        // lọc học sinh đang học từ enrollments để ngăn điểm danh nhầm học sinh đã nghỉ học
         List<Enrollment> enrollments = enrollmentRepository.findBySchoolClassId(classId).stream()
                 .filter(e -> e.getStatus() == EnrollmentStatus.STUDYING)
                 .collect(Collectors.toList());
 
-        // 2. Lấy dữ liệu sổ tay ĐÃ CÓ trong ngày hôm nay
         List<DailyLog> existingLogs = dailyLogRepository.findByClassIdAndDate(classId, date);
         
-        // Đưa list Log vào Map để tra cứu nhanh (Key là Child ID)
+        // chuyển sang map để giảm độ phức tạp tra cứu từ O(n) xuống O(1)
         Map<Long, DailyLog> logMap = existingLogs.stream()
                 .collect(Collectors.toMap(log -> log.getChild().getId(), log -> log));
 
-        // 3. Trộn dữ liệu: Bé nào chưa có điểm danh thì hệ thống tự sinh ra dữ liệu ảo trả về
+        // sinh dữ liệu ảo (dto) cho các bé chưa điểm danh để frontend hiển thị list đầy đủ
         return enrollments.stream().map(enrollment -> {
             Long childId = enrollment.getChild().getId();
             DailyLog existingLog = logMap.get(childId);
 
             if (existingLog != null) {
-                // Đã có data -> Map thẳng ra Response
                 return mapToResponse(existingLog);
             } else {
-                // Chưa có data -> Trả về DTO "nháp" với trạng thái mặc định, chưa save DB
                 return DailyLogResponse.builder()
-                        .id(null) // Cố tình để null để Frontend biết bé này chưa từng được lưu
+                        .id(null) // để null để frontend biết bản ghi này chưa tồn tại trong db
                         .childId(childId)
                         .childFullName(enrollment.getChild().getFullName())
                         .date(date)
-                        .attendanceStatus(AttendanceStatus.ABSENT_UNEXCUSED) // Mặc định là chưa điểm danh/vắng
+                        .attendanceStatus(AttendanceStatus.ABSENT_UNEXCUSED)
                         .hasSevereAllergy(hasSevereAllergy(enrollment.getChild()))
                         .build();
             }
@@ -94,12 +91,11 @@ public class DailyLogServiceImpl implements DailyLogService {
         var schoolClass = schoolClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học với ID: " + classId));
 
-        // Lấy tất cả DailyLog đã có trong ngày cho lớp này
         List<DailyLog> existingLogs = dailyLogRepository.findByClassIdAndDate(classId, date);
         Map<Long, DailyLog> logMap = existingLogs.stream()
                 .collect(Collectors.toMap(log -> log.getChild().getId(), log -> log));
 
-        // Lấy tất cả Child của các request items mà chưa có log để tránh query N+1
+        // tối ưu hiệu suất, lấy tất cả child bằng 1 query in() để tránh n+1
         List<Long> missingLogChildIds = request.getLogs().stream()
                 .map(DailyLogBatchUpdateRequest.DailyLogItem::getChildId)
                 .filter(childId -> !logMap.containsKey(childId))
@@ -110,7 +106,7 @@ public class DailyLogServiceImpl implements DailyLogService {
             : childRepository.findAllById(missingLogChildIds).stream()
                 .collect(Collectors.toMap(Child::getId, child -> child));
 
-        // Lấy danh sách học sinh hợp lệ của lớp để ngăn ghi đè sai lớp
+        // chặn tấn công idor hoặc submit sai classid từ frontend
         List<Long> validChildIds = enrollmentRepository.findBySchoolClassId(classId).stream()
                 .filter(e -> e.getStatus() == EnrollmentStatus.STUDYING)
                 .map(e -> e.getChild().getId())
@@ -125,7 +121,7 @@ public class DailyLogServiceImpl implements DailyLogService {
                 throw new RuntimeException("Học sinh ID: " + item.getChildId() + " không thuộc lớp học này.");
             }
 
-            // Tìm bản ghi cũ, nếu không có thì khởi tạo bản ghi mới (Upsert)
+            // dùng logic upsert để hỗ trợ cập nhật nhiều lần
             DailyLog dailyLog = logMap.get(item.getChildId());
             boolean isNewCheckIn = false;
             boolean isNewCheckOut = false;
@@ -147,7 +143,6 @@ public class DailyLogServiceImpl implements DailyLogService {
                 isNewCheckOut = dailyLog.getCheckOutTime() == null && item.getCheckOutTime() != null;
             }
 
-            // Ghi đè dữ liệu đánh giá mới từ App gửi lên
             dailyLog.setAttendanceStatus(item.getAttendanceStatus());
             dailyLog.setCheckInTime(item.getCheckInTime());
             dailyLog.setCheckOutTime(item.getCheckOutTime());
@@ -157,7 +152,7 @@ public class DailyLogServiceImpl implements DailyLogService {
 
             logsToSave.add(dailyLog);
 
-            // Chuẩn bị gửi thông báo nếu có sự thay đổi về giờ vào/ra
+            // chỉ gửi thông báo khi có sự kiện phát sinh giờ vào/ra lần đầu tiên
             final DailyLog logRef = dailyLog;
             final boolean notifyCheckIn = isNewCheckIn;
             final boolean notifyCheckOut = isNewCheckOut;
@@ -184,10 +179,10 @@ public class DailyLogServiceImpl implements DailyLogService {
             }
         }
 
-        // Lưu toàn bộ vào DB trong 1 hit (tối ưu hiệu suất)
+        // tối ưu hiệu suất với batch insert/update
         dailyLogRepository.saveAll(logsToSave);
 
-        // Gửi thông báo sau khi lưu xong để logRef.getId() đã có giá trị thực
+        // delay gửi thông báo sau khi save để lấy được id thực của entity
         for (Runnable task : notificationsToSend) {
             task.run();
         }
@@ -221,23 +216,20 @@ public class DailyLogServiceImpl implements DailyLogService {
 
     @Override
     public DailyLogResponse getDailyLogForChild(Long childId, LocalDate date) {
-        // 1. Kiểm tra hồ sơ bé có tồn tại không
-        // (Lưu ý: Nếu file này em chưa inject ChildRepository, hãy khai báo thêm lên đầu class nhé)
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Học sinh với ID: " + childId));
 
         securityService.verifyParentOwnsChild(childId);
 
-        // 2. Tìm DailyLog dưới DB
         Optional<DailyLog> logOpt = dailyLogRepository.findByChildIdAndDate(childId, date);
 
-        // 3. Xử lý logic hiển thị nếu Giáo viên chưa điểm danh (Trả về các trường điểm danh rỗng)
+        // trả về template rỗng nếu giáo viên chưa điểm danh
         if (logOpt.isEmpty()) {
             return DailyLogResponse.builder()
                     .childId(child.getId())
                     .childFullName(child.getFullName())
                     .date(date)
-                    .attendanceStatus(null) // Để trống tình trạng điểm danh theo yêu cầu
+                    .attendanceStatus(null)
                     .checkInTime(null)
                     .checkOutTime(null)
                     .mealStatus(null)
@@ -247,7 +239,6 @@ public class DailyLogServiceImpl implements DailyLogService {
                     .build();
         }
 
-        // 4. Nếu giáo viên đã điểm danh rồi thì map dữ liệu trả về bình thường
         DailyLog log = logOpt.get();
         return DailyLogResponse.builder()
                 .id(log.getId())
@@ -265,20 +256,16 @@ public class DailyLogServiceImpl implements DailyLogService {
 
     @Override
     public List<com.vusystem.preschool_management_backend.modules.mobile.dto.response.DailyLogHistoryResponse> getChildAttendanceHistory(Long childId, int year, int month) {
-        // 1. Kiểm tra hồ sơ bé có tồn tại không
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ Học sinh với ID: " + childId));
 
         securityService.verifyParentOwnsChild(childId);
 
-        // 2. Tính toán ngày bắt đầu và kết thúc của tháng
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
-        // 3. Lấy dữ liệu
         List<DailyLog> logs = dailyLogRepository.findByChildIdAndDateBetweenOrderByDateAsc(childId, startDate, endDate);
 
-        // 4. Map sang DTO
         return logs.stream().map(log -> com.vusystem.preschool_management_backend.modules.mobile.dto.response.DailyLogHistoryResponse.builder()
                 .date(log.getDate())
                 .attendanceStatus(log.getAttendanceStatus())

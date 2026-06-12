@@ -12,7 +12,7 @@ export default function TeacherIncidentScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Date selection states
+
   const [date, setDate] = useState<Date>(new Date());
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -61,9 +61,9 @@ export default function TeacherIncidentScreen() {
 
   const getStatusColor = (status: IncidentStatus) => {
     switch (status) {
-      case 'NEW': return '#eab308'; // yellow
-      case 'IN_PROGRESS': return '#f97316'; // orange
-      case 'RESOLVED': return '#22c55e'; // green
+      case 'NEW': return '#eab308';
+      case 'IN_PROGRESS': return '#f97316';
+      case 'RESOLVED': return '#22c55e';
       default: return '#64748b';
     }
   };
@@ -79,10 +79,10 @@ export default function TeacherIncidentScreen() {
 
   const getSeverityColor = (severity: SeverityLevel) => {
     switch (severity) {
-      case 'MILD': return '#3b82f6'; // blue
-      case 'MODERATE': return '#f59e0b'; // amber
-      case 'SEVERE': return '#ef4444'; // red
-      case 'CRITICAL': return '#b91c1c'; // dark red
+      case 'MILD': return '#3b82f6';
+      case 'MODERATE': return '#f59e0b';
+      case 'SEVERE': return '#ef4444';
+      case 'CRITICAL': return '#b91c1c';
       default: return '#64748b';
     }
   };
@@ -97,7 +97,7 @@ export default function TeacherIncidentScreen() {
     }
   };
 
-  // Filter incidents by selected date
+  // lọc sự cố theo ngày
   const filteredIncidents = incidents.filter(incident => {
     const incidentDate = new Date(incident.incidentTime);
     return incidentDate.getDate() === date.getDate() && 
@@ -107,7 +107,6 @@ export default function TeacherIncidentScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
@@ -125,8 +124,6 @@ export default function TeacherIncidentScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
           {weekDates.map((d, index) => {
@@ -149,8 +146,6 @@ export default function TeacherIncidentScreen() {
           })}
         </ScrollView>
       </View>
-
-      {/* List */}
       <ScrollView 
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0ea5e9']} />}
@@ -213,8 +208,6 @@ export default function TeacherIncidentScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Calendar Modal */}
       <Modal visible={showHistoryModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>

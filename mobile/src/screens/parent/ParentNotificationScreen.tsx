@@ -189,7 +189,7 @@ export default function ParentNotificationScreen() {
           
           if (item.referenceType === 'INCIDENT' && item.referenceId) {
             try {
-              // Fetch childId since ParentIncidentDetail requires it
+              // lấy childid vì màn hình chi tiết cần
               const dashboardData = await parentDashboardService.getDashboardData();
               if (dashboardData && dashboardData.children && dashboardData.children.length > 0) {
                 const currentChildId = dashboardData.children[0].id;

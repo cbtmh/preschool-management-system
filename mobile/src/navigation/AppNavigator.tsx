@@ -30,7 +30,7 @@ import { ActivityIndicator, View, Platform } from 'react-native';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { authService } from '../services/auth.service';
 
-// SECURITY: Suppress console logs on web to prevent users from inspecting logs
+// tắt console.log trên web để ngăn chặn người dùng xem thông tin debug
 if (Platform.OS === 'web') {
   console.log = () => {};
   console.info = () => {};
@@ -56,7 +56,6 @@ export default function AppNavigator() {
   }, [token, expoPushToken]);
 
   useEffect(() => {
-    // Check for saved credentials when app starts
     const bootstrapAsync = async () => {
       try {
         let savedToken = null;

@@ -5,14 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { leaveRequestService } from '../../services/leaveRequest.service';
-// import DateTimePicker from '@react-native-community/datetimepicker'; // Nếu dự án chưa có thư viện này, ta có thể dùng UI input ngày đơn giản dạng String hoặc giả lập. Tôi sẽ dùng TextInput cho đơn giản trước, hoặc nếu có DateTimePicker thì dùng.
-// Vì expo thường dùng @react-native-community/datetimepicker, tôi sẽ dùng cách đơn giản trước.
 
 export default function CreateLeaveRequestScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const childId = route.params?.childId;
-  const onGoBack = route.params?.onGoBack; // Callback để load lại list
+  const onGoBack = route.params?.onGoBack; // callback để load lại list
 
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);

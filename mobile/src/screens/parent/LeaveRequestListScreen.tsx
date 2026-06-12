@@ -23,7 +23,7 @@ export default function LeaveRequestListScreen() {
   const loadRequests = async () => {
     let currentChildId = childId;
     
-    // Nếu chưa có childId (đi từ màn hình Tiện ích)
+    // nếu chưa có childid (đi từ màn hình tiện ích)
     if (!currentChildId) {
       try {
         const dashboardData = await parentDashboardService.getDashboardData();
@@ -74,7 +74,7 @@ export default function LeaveRequestListScreen() {
   useEffect(() => {
     generateWeekDates(new Date());
     loadRequests();
-  }, []); // Remove childId from dependency array so it only loads once or on refresh
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -83,9 +83,9 @@ export default function LeaveRequestListScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'APPROVED': return '#22c55e'; // Green
-      case 'REJECTED': return '#ef4444'; // Red
-      default: return '#f59e0b'; // Yellow (PENDING)
+      case 'APPROVED': return '#22c55e';
+      case 'REJECTED': return '#ef4444';
+      default: return '#f59e0b';
     }
   };
 

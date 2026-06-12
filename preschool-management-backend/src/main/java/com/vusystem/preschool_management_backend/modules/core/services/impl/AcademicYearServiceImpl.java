@@ -24,7 +24,7 @@ public class AcademicYearServiceImpl implements AcademicYearService {
         validateDates(request);
 
         if (academicYearRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên năm học đã tồn tại trong hệ thống"); // GlobalExceptionHandler sẽ bắt và trả về 400
+            throw new RuntimeException("Tên năm học đã tồn tại trong hệ thống");
         }
 
         handleIsCurrentFlag(request.getIsCurrent());
@@ -52,7 +52,7 @@ public class AcademicYearServiceImpl implements AcademicYearService {
             throw new RuntimeException("Tên năm học đã tồn tại trong hệ thống");
         }
 
-        // Nếu cập nhật năm này thành "Hiện tại" (mà trước đó nó không phải)
+        // kiểm tra và cập nhật cờ is_current nếu có sự thay đổi để đảm bảo chỉ có 1 năm học hiện tại
         if (request.getIsCurrent() && !existingYear.isCurrent()) {
             handleIsCurrentFlag(true);
         }
@@ -93,8 +93,7 @@ public class AcademicYearServiceImpl implements AcademicYearService {
         academicYearRepository.delete(academicYear);
     }
 
-    // --- Private Helper Methods ---
-
+    
     private void validateDates(AcademicYearRequest request) {
         if (!request.getStartDate().isBefore(request.getEndDate())) {
             throw new RuntimeException("Ngày bắt đầu năm học phải trước ngày kết thúc");
