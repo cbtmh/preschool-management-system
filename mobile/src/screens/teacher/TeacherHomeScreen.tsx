@@ -112,7 +112,7 @@ export default function TeacherHomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#fff7ed', marginTop: 16 }]}
+            style={[styles.actionCard, { backgroundColor: '#fff7ed' }]}
             onPress={() => navigation.navigate('TeacherMenu')}
           >
             <View style={[styles.iconBox, { backgroundColor: '#ffedd5' }]}>
@@ -122,7 +122,7 @@ export default function TeacherHomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#fdf2f8', marginTop: 16 }]}
+            style={[styles.actionCard, { backgroundColor: '#fdf2f8' }]}
             onPress={() => navigation.navigate('TeacherMedication')}
           >
             <View style={[styles.iconBox, { backgroundColor: '#fce7f3' }]}>
@@ -132,7 +132,7 @@ export default function TeacherHomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#fdfce8', marginTop: 16 }]}
+            style={[styles.actionCard, { backgroundColor: '#fdfce8' }]}
             onPress={() => navigation.navigate('TeacherLeaveRequest')}
           >
             <View style={[styles.iconBox, { backgroundColor: '#fef08a' }]}>
