@@ -39,5 +39,12 @@ export const mealRegistrationService = {
       params: { startDate, endDate }
     });
     return response.data.data;
+  },
+
+  getRegistrationsByClassAndDate: async (classId: number, date: string): Promise<MealRegistrationResponse[]> => {
+    const response = await axiosInstance.get(`/core/meal-registrations/class/${classId}`, {
+      params: { date }
+    });
+    return response.data.data;
   }
 };

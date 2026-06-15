@@ -64,6 +64,10 @@ const Meals = () => {
   const [isMenuLoading, setIsMenuLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Menu Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   // Tab 2 States: Statistics
   const [statDateRange, setStatDateRange] = useState<{ from: Date; to: Date }>({
     from: startOfMonth(new Date()),
@@ -104,6 +108,9 @@ const Meals = () => {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(menus.length / itemsPerPage));
+  const currentMenus = menus.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Fetch Stats
   const fetchStats = async () => {
     if (!statDateRange.from || !statDateRange.to) return;
@@ -124,6 +131,7 @@ const Meals = () => {
   };
 
   useEffect(() => {
+    setCurrentPage(1);
     fetchMenus();
   }, [dateRange]);
 
@@ -350,7 +358,7 @@ const Meals = () => {
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Không có thực đơn nào trong khoảng thời gian này</TableCell>
                     </TableRow>
                   ) : (
-                    menus.map((menu) => (
+                    currentMenus.map((menu) => (
                       <TableRow key={menu.id}>
                         <TableCell className="font-medium">
                           {format(new Date(menu.date), 'dd/MM/yyyy')}
@@ -385,6 +393,44 @@ const Meals = () => {
               </Table>
             </CardContent>
           </Card>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-end">
+              <nav role="navigation" aria-label="pagination" className="mx-auto flex w-full justify-end">
+                <ul className="flex flex-row items-center gap-1">
+                  <li>
+                    <Button
+                      variant="ghost"
+                      className={cn("gap-1 pl-2.5", currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer")}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    >
+                      <span>Trước</span>
+                    </Button>
+                  </li>
+                  {Array.from({ length: totalPages }).map((_, index) => (
+                    <li key={index}>
+                      <Button
+                        variant={currentPage === index + 1 ? "outline" : "ghost"}
+                        className={cn("w-9 h-9", currentPage === index + 1 ? "" : "cursor-pointer")}
+                        onClick={() => setCurrentPage(index + 1)}
+                      >
+                        {index + 1}
+                      </Button>
+                    </li>
+                  ))}
+                  <li>
+                    <Button
+                      variant="ghost"
+                      className={cn("gap-1 pr-2.5", currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer")}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    >
+                      <span>Sau</span>
+                    </Button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          )}
         </TabsContent>
 
         {/* TAB 2: STATISTICS */}

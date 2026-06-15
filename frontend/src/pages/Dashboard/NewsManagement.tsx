@@ -229,6 +229,7 @@ const NewsManagement = () => {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious 
+                      text="Trước"
                       onClick={() => setPage(p => Math.max(0, p - 1))}
                       className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
@@ -246,6 +247,7 @@ const NewsManagement = () => {
                   ))}
                   <PaginationItem>
                     <PaginationNext 
+                      text="Sau"
                       onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                       className={page === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />

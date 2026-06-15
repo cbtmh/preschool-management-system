@@ -32,7 +32,7 @@ public class ExpoPushService {
         List<Map<String, Object>> messages = new ArrayList<>();
 
         for (String token : pushTokens) {
-            if (token != null && token.startsWith("ExponentPushToken")) {
+            if (token != null && (token.startsWith("ExponentPushToken") || token.startsWith("ExpoPushToken"))) {
                 Map<String, Object> message = new HashMap<>();
                 message.put("to", token);
                 message.put("title", title);

@@ -12,6 +12,7 @@ import TeacherCreateIncidentScreen from './TeacherCreateIncidentScreen';
 import TeacherIncidentDetailScreen from './TeacherIncidentDetailScreen';
 import TeacherAllergyScreen from './TeacherAllergyScreen';
 import TeacherLeaveRequestScreen from './TeacherLeaveRequestScreen';
+import TeacherMealSummaryScreen from './TeacherMealSummaryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +25,7 @@ export default function TeacherUtilityStack() {
       <Stack.Screen name="TeacherUpdateHealth" component={TeacherUpdateHealthScreen} />
       <Stack.Screen name="TeacherMenu" component={TeacherMenuScreen} />
       <Stack.Screen name="TeacherUpdateMenu" component={TeacherUpdateMenuScreen} />
+      <Stack.Screen name="TeacherMealSummary" component={TeacherMealSummaryScreen} />
       <Stack.Screen name="TeacherMedication" component={TeacherMedicationScreen} />
       <Stack.Screen name="TeacherIncident" component={TeacherIncidentScreen} />
       <Stack.Screen name="TeacherCreateIncident" component={TeacherCreateIncidentScreen} />

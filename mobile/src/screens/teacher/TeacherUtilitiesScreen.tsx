@@ -46,6 +46,16 @@ export default function TeacherUtilitiesScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
+            style={[styles.actionCard, { backgroundColor: '#f0fdfa' }]}
+            onPress={() => navigation.navigate('TeacherMealSummary')}
+          >
+            <View style={[styles.iconBox, { backgroundColor: '#ccfbf1' }]}>
+              <Text style={styles.iconText}>📊</Text>
+            </View>
+            <Text style={styles.actionTitle}>Tổng suất ăn</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
             style={[styles.actionCard, { backgroundColor: '#fdf2f8' }]}
             onPress={() => navigation.navigate('TeacherMedication')}
           >

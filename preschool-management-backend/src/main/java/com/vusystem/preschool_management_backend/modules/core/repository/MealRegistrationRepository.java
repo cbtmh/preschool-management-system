@@ -33,9 +33,9 @@ public interface MealRegistrationRepository extends JpaRepository<MealRegistrati
     
     // 4. Thống kê tổng số suất ăn theo loại (Sáng, Trưa, Xế) của toàn trường trong 1 khoảng thời gian (Dành cho Admin/Nhà bếp)
     @Query("SELECT mr.mealType, COUNT(mr) FROM MealRegistration mr " +
-           "WHERE mr.date >= :startDate AND mr.date <= :endDate AND mr.status = com.vusystem.preschool_management_backend.common.entity.enums.MealRegStatus.REGISTERED " +
+           "WHERE mr.date >= :startDate AND mr.date <= :endDate AND mr.status = :status " +
            "GROUP BY mr.mealType")
-    List<Object[]> countRegisteredMealsByDateRangeGroupByType(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<Object[]> countRegisteredMealsByDateRangeGroupByType(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("status") com.vusystem.preschool_management_backend.common.entity.enums.MealRegStatus status);
 
     //5. thống kê suất ăn
     @Query("SELECT mr.child.id, mr.child.fullName, mr.status, mr.mealType, COUNT(mr.id) " +

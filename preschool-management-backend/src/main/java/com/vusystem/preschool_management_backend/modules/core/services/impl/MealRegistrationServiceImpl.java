@@ -223,7 +223,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
     @Override
     public MealStatisticsResponse getMealStatistics(LocalDate startDate, LocalDate endDate) {
-        List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate);
+        List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate, MealRegStatus.REGISTERED);
         
         long breakfastCount = 0;
         long lunchCount = 0;
@@ -273,7 +273,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
             Long childId = (Long) row[0];
             String childFullName = (String) row[1];
             MealRegStatus status = (MealRegStatus) row[2]; // Ép kiểu về đúng Enum MealRegStatus của dự án
-            long count = (Long) row[3];
+            long count = ((Number) row[4]).longValue();
 
             ChildMonthlyMealStatsResponse studentStats = statsMap.computeIfAbsent(childId, id -> 
                 ChildMonthlyMealStatsResponse.builder()

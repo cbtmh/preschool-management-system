@@ -50,7 +50,7 @@ const Incidents = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>("NEW");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   const { register, handleSubmit, setValue, watch, reset } = useForm<AdminIncidentUpdateRequest>();
 
@@ -62,6 +62,14 @@ const Incidents = () => {
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredIncidents.length / itemsPerPage));
+
+  // Ensure currentPage is within bounds if totalPages shrinks
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   const currentData = filteredIncidents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const fetchIncidents = async () => {
@@ -146,7 +154,7 @@ const Incidents = () => {
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Quản lý Sự việc</h1>
       </div>
 
-      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+      <Tabs value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }} className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-[600px] mb-6">
           <TabsTrigger value="NEW" className="data-[state=active]:bg-red-100 data-[state=active]:text-red-800">
             Mới (Chưa xử lý)
@@ -207,33 +215,41 @@ const Incidents = () => {
       </div>
 
       {totalPages > 1 && (
-        <Pagination className="mt-4 justify-end">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }).map((_, index) => (
-              <PaginationItem key={index}>
-                <PaginationLink 
-                  onClick={() => setCurrentPage(index + 1)}
-                  isActive={currentPage === index + 1}
-                  className="cursor-pointer"
+        <div className="mt-4 flex justify-end">
+          <nav role="navigation" aria-label="pagination" className="mx-auto flex w-full justify-end">
+            <ul className="flex flex-row items-center gap-1">
+              <li>
+                <Button
+                  variant="ghost"
+                  className={`gap-1 pl-2.5 ${currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 >
-                  {index + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+                  <span>Trước</span>
+                </Button>
+              </li>
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <li key={index}>
+                  <Button
+                    variant={currentPage === index + 1 ? "outline" : "ghost"}
+                    className={`w-9 h-9 ${currentPage === index + 1 ? "" : "cursor-pointer"}`}
+                    onClick={() => setCurrentPage(index + 1)}
+                  >
+                    {index + 1}
+                  </Button>
+                </li>
+              ))}
+              <li>
+                <Button
+                  variant="ghost"
+                  className={`gap-1 pr-2.5 ${currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                >
+                  <span>Sau</span>
+                </Button>
+              </li>
+            </ul>
+          </nav>
+        </div>
       )}
         </TabsContent>
       </Tabs>
