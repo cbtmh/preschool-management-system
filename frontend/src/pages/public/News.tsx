@@ -128,7 +128,7 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {totalPages > 1 && !loading && (
+      {totalPages > 0 && !loading && (
         <div className="mt-16 flex justify-center items-center gap-2">
           <button
             onClick={() => handlePageChange(page - 1)}
