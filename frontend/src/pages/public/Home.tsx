@@ -1,8 +1,26 @@
-import React from 'react';
-import { ArrowRight, Sparkles, Star, Heart, Flower2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Sparkles, Star, Heart, Flower2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const heroImages = [
+  "/hero-image.png",
+  "/hero-image-2.png",
+  "/hero-image-3.png"
+];
+
 const Home: React.FC = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
@@ -48,12 +66,53 @@ const Home: React.FC = () => {
             <div className="absolute inset-0 bg-pastel-yellow rounded-[3rem] rotate-3 scale-105 -z-10 transition-transform hover:rotate-6"></div>
             <div className="absolute inset-0 bg-pastel-blue rounded-[3rem] -rotate-3 scale-105 -z-20 transition-transform hover:-rotate-6"></div>
             
-            {/* Image */}
-            <img 
-              src="/hero-image.png" 
-              alt="Trẻ em đang vui chơi và học tập" 
-              className="w-full h-auto object-cover rounded-[2.5rem] shadow-xl border-4 border-white relative z-10"
-            />
+            {/* Image Slider */}
+            <div className="relative w-full aspect-[4/3] sm:aspect-square md:aspect-[4/3] rounded-[2.5rem] shadow-xl border-4 border-white overflow-hidden z-10 group">
+              {heroImages.map((img, index) => (
+                <img 
+                  key={index}
+                  src={img} 
+                  alt={`Trẻ em đang vui chơi và học tập ${index + 1}`} 
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                    index === currentSlide ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              ))}
+
+              {/* Slider Controls */}
+              <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button 
+                  onClick={prevSlide}
+                  className="bg-white/80 hover:bg-white text-slate-800 p-2 rounded-full backdrop-blur-sm transition-all shadow-md"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button 
+                  onClick={nextSlide}
+                  className="bg-white/80 hover:bg-white text-slate-800 p-2 rounded-full backdrop-blur-sm transition-all shadow-md"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Slider Indicators */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {heroImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      index === currentSlide 
+                        ? 'bg-white w-6' 
+                        : 'bg-white/50 hover:bg-white/80'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
             
             {/* Floating badges */}
             <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-2xl shadow-lg border border-pastel-green z-20 flex items-center gap-3 animate-bounce" style={{ animationDuration: '3s' }}>
@@ -73,7 +132,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section (Brief overview) */}
+      {/* Features Section */}
       <section className="w-full bg-white py-20 border-t border-pastel-yellow/30 relative">
         <div className="absolute top-0 right-1/4 -translate-y-1/2">
            <Flower2 className="w-12 h-12 text-pastel-pink rotate-45" />
