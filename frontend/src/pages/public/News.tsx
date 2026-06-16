@@ -37,8 +37,9 @@ const News: React.FC = () => {
       setLoading(true);
       const res = await NewsService.getPublishedNews(pageNum, 6); // Fetch 6 items per page
       if (res.data) {
-        setNews(res.data.content);
-        setTotalPages(res.data.totalPages);
+        setNews(res.data.content || []);
+        const totalPagesCount = res.data.page?.totalPages ?? res.data.totalPages ?? 0;
+        setTotalPages(totalPagesCount);
       }
     } catch (error) {
       console.error('Error fetching news:', error);
@@ -128,7 +129,7 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {totalPages > 0 && !loading && (
+      {totalPages > 1 && !loading && (
         <div className="mt-16 flex justify-center items-center gap-2">
           <button
             onClick={() => handlePageChange(page - 1)}

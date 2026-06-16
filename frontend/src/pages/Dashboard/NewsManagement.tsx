@@ -50,7 +50,7 @@ const NewsManagement = () => {
   const size = 10;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       title: '',
       category: '',
@@ -65,8 +65,9 @@ const NewsManagement = () => {
     try {
       const res = await NewsService.getAllNews(page, size);
       if (res.data) {
-        setNewsList(res.data.content);
-        setTotalPages(res.data.totalPages);
+        setNewsList(res.data.content || []);
+        const totalPagesCount = res.data.page?.totalPages ?? res.data.totalPages ?? 0;
+        setTotalPages(totalPagesCount);
       }
     } catch (error) {
       toast.error('Lỗi khi tải danh sách tin tức');
@@ -116,7 +117,11 @@ const NewsManagement = () => {
   const onSubmit = async (values: FormValues) => {
     try {
       const requestData: NewsRequest = {
-        ...values,
+        title: values.title,
+        category: values.category,
+        summary: values.summary || '',
+        content: values.content,
+        isPublished: values.isPublished,
         image: selectedImage,
       };
 
@@ -269,7 +274,7 @@ const NewsManagement = () => {
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control as any}

@@ -4,11 +4,17 @@ import { News, NewsRequest } from '../types/portal';
 
 interface PageableResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  last: boolean;
+  totalElements?: number;
+  totalPages?: number;
+  size?: number;
+  number?: number;
+  last?: boolean;
+  page?: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
 }
 
 export const NewsService = {
