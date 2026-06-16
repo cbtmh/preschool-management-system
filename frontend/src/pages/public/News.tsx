@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { NewsService } from '../../services/news.service';
 import { News as NewsType } from '../../types/portal';
@@ -30,19 +30,15 @@ const News: React.FC = () => {
   const [news, setNews] = useState<NewsType[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const fetchNews = async (pageNum: number, append = false) => {
+  const fetchNews = async (pageNum: number) => {
     try {
       setLoading(true);
       const res = await NewsService.getPublishedNews(pageNum, 6); // Fetch 6 items per page
       if (res.data) {
-        if (append) {
-          setNews(prev => [...prev, ...res.data!.content]);
-        } else {
-          setNews(res.data.content);
-        }
-        setHasMore(!res.data.last && res.data.totalPages > pageNum + 1);
+        setNews(res.data.content);
+        setTotalPages(res.data.totalPages);
       }
     } catch (error) {
       console.error('Error fetching news:', error);
@@ -52,13 +48,14 @@ const News: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchNews(0);
-  }, []);
+    fetchNews(page);
+  }, [page]);
 
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchNews(nextPage, true);
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -131,13 +128,38 @@ const News: React.FC = () => {
         </div>
       )}
 
-      {hasMore && !loading && (
-        <div className="mt-16 text-center">
-          <button 
-            onClick={handleLoadMore}
-            className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-full hover:bg-slate-200 transition-colors"
+      {totalPages > 1 && !loading && (
+        <div className="mt-16 flex justify-center items-center gap-2">
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 0}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous page"
           >
-            Tải Thêm Tin Tức
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => handlePageChange(i)}
+              className={`w-10 h-10 flex items-center justify-center rounded-full font-bold transition-colors ${
+                page === i 
+                  ? 'bg-orange-500 text-white shadow-md' 
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page === totalPages - 1}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next page"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       )}
