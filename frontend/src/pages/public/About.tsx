@@ -39,9 +39,9 @@ const About: React.FC = () => {
 
       <div className="bg-white rounded-[2rem] shadow-sm border border-pastel-yellow p-8 md:p-12 relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-pastel-yellow rounded-full opacity-50"></div>
-        <h2 className="text-3xl font-bold text-slate-800 mb-12 text-center">Giá Trị Cốt Lõi</h2>
+        <h2 className="text-3xl font-bold text-slate-800 mb-12 text-center ">Giá Trị Cốt Lõi</h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-10 mt-10">
           <div className="flex gap-4">
             <div className="bg-pastel-pink/50 p-3 rounded-2xl h-fit">
               <HeartHandshake className="w-6 h-6 text-pink-700" />
