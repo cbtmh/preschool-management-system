@@ -25,10 +25,10 @@ import { cn } from '../../lib/utils';
 // Schema for Meal Creation
 const mealFormSchema = z.object({
   date: z.date({
-    required_error: "Vui lòng chọn ngày",
+    message: "Vui lòng chọn ngày",
   }),
   mealType: z.nativeEnum(MealType, {
-    required_error: "Vui lòng chọn loại bữa ăn",
+    message: "Vui lòng chọn loại bữa ăn",
   }),
   description: z.string().min(1, "Vui lòng nhập mô tả chi tiết"),
   imageUrl: z.string().optional(),
@@ -202,7 +202,6 @@ const Meals = () => {
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
-                    initialFocus
                     mode="range"
                     defaultMonth={dateRange?.from}
                     selected={{ from: dateRange.from, to: dateRange.to }}
@@ -263,7 +262,6 @@ const Meals = () => {
                                 selected={field.value}
                                 onSelect={field.onChange}
                                 disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
-                                initialFocus
                               />
                             </PopoverContent>
                           </Popover>
@@ -464,7 +462,6 @@ const Meals = () => {
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
-                  initialFocus
                   mode="range"
                   defaultMonth={statDateRange?.from}
                   selected={{ from: statDateRange.from, to: statDateRange.to }}
