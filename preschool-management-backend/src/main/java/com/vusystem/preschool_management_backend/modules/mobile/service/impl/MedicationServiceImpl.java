@@ -50,8 +50,8 @@ public class MedicationServiceImpl implements MedicationService {
         }
 
         // không thể dặn thuốc sau 9h nhé (đối với ngày hiện tại)
-        if (request.getStartDate().isEqual(LocalDate.now())) {
-            if (java.time.LocalTime.now().isAfter(java.time.LocalTime.of(9, 0))) {
+        if (request.getStartDate().isEqual(LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")))) {
+            if (java.time.LocalTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).isAfter(java.time.LocalTime.of(9, 0))) {
                 throw new RuntimeException("Không thể dặn thuốc cho ngày hôm nay sau 9h sáng");
             }
         }
@@ -140,7 +140,7 @@ public class MedicationServiceImpl implements MedicationService {
         }
 
         request.getConfirmedDates().add(date);
-        request.setStatus(RequestStatus.COMPLETED); // Vẫn lưu main status là COMPLETED nếu muốn
+        request.setStatus(RequestStatus.COMPLETED); 
         medicationRepository.save(request);
 
         try {

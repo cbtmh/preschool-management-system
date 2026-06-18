@@ -310,13 +310,11 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 try {
                     status = MealRegStatus.valueOf(new String((byte[]) row[2]).trim().toUpperCase());
                 } catch (IllegalArgumentException e) {
-                    // Ignore
                 }
             } else if (row[2] != null) {
                 try {
                     status = MealRegStatus.valueOf(row[2].toString().trim().toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    // Ignore or log error, status remains null
+                } catch (IllegalArgumentException e) {                  
                 }
             }
             

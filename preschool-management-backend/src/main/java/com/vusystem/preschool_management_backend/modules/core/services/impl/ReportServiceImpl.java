@@ -65,9 +65,9 @@ public class ReportServiceImpl implements ReportService {
 
         List<Object[]> attendanceStats = dailyLogRepository.countAttendanceStatsForClass(classId, startDate, endDate);
         for (Object[] stat : attendanceStats) {
-            Long childId = (Long) stat[0];
+            Long childId = ((Number) stat[0]).longValue();
             AttendanceStatus status = (AttendanceStatus) stat[1];
-            Long count = (Long) stat[2];
+            Long count = ((Number) stat[2]).longValue();
 
             if (reportMap.containsKey(childId)) {
                 ChildAttendanceReportDto dto = reportMap.get(childId);
@@ -105,10 +105,43 @@ public class ReportServiceImpl implements ReportService {
 
         List<Object[]> mealStats = mealRegistrationRepository.countMonthlyMealStatsForClass(classId, startDate, endDate);
         for (Object[] stat : mealStats) {
-            Long childId = (Long) stat[0];
-            MealRegStatus status = (MealRegStatus) stat[2];
-            MealType mealType = (MealType) stat[3];
-            Long count = (Long) stat[4];
+            Long childId = ((Number) stat[0]).longValue();
+            MealRegStatus status = null;
+            if (stat[2] instanceof MealRegStatus) {
+                status = (MealRegStatus) stat[2];
+            } else if (stat[2] instanceof Number) {
+                int ordinal = ((Number) stat[2]).intValue();
+                if (ordinal >= 0 && ordinal < MealRegStatus.values().length) {
+                    status = MealRegStatus.values()[ordinal];
+                }
+            } else if (stat[2] instanceof byte[]) {
+                try {
+                    status = MealRegStatus.valueOf(new String((byte[]) stat[2]).trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            } else if (stat[2] != null) {
+                try {
+                    status = MealRegStatus.valueOf(stat[2].toString().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            }
+
+            MealType mealType = null;
+            if (stat[3] instanceof MealType) {
+                mealType = (MealType) stat[3];
+            } else if (stat[3] instanceof Number) {
+                int ordinal = ((Number) stat[3]).intValue();
+                if (ordinal >= 0 && ordinal < MealType.values().length) {
+                    mealType = MealType.values()[ordinal];
+                }
+            } else if (stat[3] instanceof byte[]) {
+                try {
+                    mealType = MealType.valueOf(new String((byte[]) stat[3]).trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            } else if (stat[3] != null) {
+                try {
+                    mealType = MealType.valueOf(stat[3].toString().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            }
+            Long count = ((Number) stat[4]).longValue();
 
             if (reportMap.containsKey(childId) && status == MealRegStatus.CANCELLED) {
                 ChildAttendanceReportDto dto = reportMap.get(childId);
