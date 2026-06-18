@@ -11,6 +11,12 @@ import com.vusystem.preschool_management_backend.modules.mobile.repository.Aller
 import com.vusystem.preschool_management_backend.modules.mobile.repository.MedicationRequestRepository;
 import com.vusystem.preschool_management_backend.modules.mobile.service.MedicationService;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
+import com.vusystem.preschool_management_backend.modules.communication.services.NotificationService;
+import com.vusystem.preschool_management_backend.modules.core.repository.EnrollmentRepository;
+import com.vusystem.preschool_management_backend.modules.communication.dto.SendNotificationRequest;
+import com.vusystem.preschool_management_backend.common.entity.enums.NotificationType;
+import com.vusystem.preschool_management_backend.common.entity.academic.Enrollment;
+import com.vusystem.preschool_management_backend.common.entity.enums.EnrollmentStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +33,8 @@ public class MedicationServiceImpl implements MedicationService {
     private final AllergyRepository allergyRepository;
     private final ChildRepository childRepository;
     private final SecurityService securityService;
+    private final NotificationService notificationService;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Override
     @Transactional
@@ -41,6 +49,13 @@ public class MedicationServiceImpl implements MedicationService {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu");
         }
 
+        // không thể dặn thuốc sau 9h nhé (đối với ngày hiện tại)
+        if (request.getStartDate().isEqual(LocalDate.now())) {
+            if (java.time.LocalTime.now().isAfter(java.time.LocalTime.of(9, 0))) {
+                throw new RuntimeException("Không thể dặn thuốc cho ngày hôm nay sau 9h sáng");
+            }
+        }
+
         MedicationRequest newRequest = MedicationRequest.builder()
                 .child(child)
                 .medicationName(request.getMedicationName())
@@ -51,7 +66,29 @@ public class MedicationServiceImpl implements MedicationService {
                 .status(RequestStatus.PENDING)
                 .build();
 
-        return mapToResponse(medicationRepository.save(newRequest));
+        MedicationRequest savedEntity = medicationRepository.save(newRequest);
+
+        try {
+            Long currentUserId = securityService.getCurrentUser().getId();
+            Enrollment enrollment = enrollmentRepository.findByChildIdAndStatus(child.getId(), EnrollmentStatus.STUDYING).orElse(null);
+            
+            if (enrollment != null && enrollment.getSchoolClass() != null) {
+                SendNotificationRequest notifRequest = SendNotificationRequest.builder()
+                        .title("Đơn dặn thuốc mới")
+                        .content("Phụ huynh bé " + child.getFullName() + " vừa gửi đơn dặn thuốc mới (" + request.getMedicationName() + ").")
+                        .type(NotificationType.CLASS)
+                        .targetClassIds(List.of(enrollment.getSchoolClass().getId()))
+                        .targetRoles(List.of("TEACHER"))
+                        .referenceType("MEDICATION_REQUEST")
+                        .referenceId(savedEntity.getId())
+                        .build();
+                notificationService.sendNotification(notifRequest, currentUserId);
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi thông báo đơn dặn thuốc: " + e.getMessage());
+        }
+
+        return mapToResponse(savedEntity);
     }
 
     @Override
@@ -74,6 +111,12 @@ public class MedicationServiceImpl implements MedicationService {
         return requests.stream().map(req -> {
             MedicationResponse dto = mapToResponse(req);
             
+            if (req.getConfirmedDates() != null && req.getConfirmedDates().contains(date)) {
+                dto.setStatus(RequestStatus.COMPLETED);
+            } else {
+                dto.setStatus(RequestStatus.PENDING);
+            }
+            
             List<String> allergies = allergyRepository.findByChildId(req.getChild().getId())
                     .stream()
                     .map(Allergy::getAllergen)
@@ -86,14 +129,37 @@ public class MedicationServiceImpl implements MedicationService {
 
     @Override
     @Transactional
-    public void markAsCompleted(Long id) {
+    public void markAsCompleted(Long id, LocalDate date) {
         MedicationRequest request = medicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn thuốc với ID: " + id));
 
         securityService.verifyTeacherTeachesChild(request.getChild().getId());
 
-        request.setStatus(RequestStatus.COMPLETED);
+        if (request.getConfirmedDates() != null && request.getConfirmedDates().contains(date)) {
+            throw new RuntimeException("Đã xác nhận uống thuốc cho ngày này rồi");
+        }
+
+        request.getConfirmedDates().add(date);
+        request.setStatus(RequestStatus.COMPLETED); // Vẫn lưu main status là COMPLETED nếu muốn
         medicationRepository.save(request);
+
+        try {
+            Long currentUserId = securityService.getCurrentUser().getId();
+            
+            Long recipientId = request.getChild().getParent().getUser().getId();
+            
+            notificationService.sendNotificationToUserWithRef(
+                    "Đã hoàn thành đơn dặn thuốc",
+                    "Giáo viên đã cho bé " + request.getChild().getFullName() + " uống thuốc (" + request.getMedicationName() + ").",
+                    NotificationType.INDIVIDUAL,
+                    currentUserId,
+                    recipientId,
+                    "MEDICATION_REQUEST",
+                    request.getId()
+            );
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi thông báo hoàn thành đơn dặn thuốc: " + e.getMessage());
+        }
     }
 
     private MedicationResponse mapToResponse(MedicationRequest entity) {

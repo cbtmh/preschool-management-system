@@ -57,8 +57,10 @@ public class MedicationController {
 
     @PutMapping("/{id}/complete")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ApiResponse<?> markAsCompleted(@PathVariable Long id) {
-        medicationService.markAsCompleted(id);
+    public ApiResponse<?> markAsCompleted(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        medicationService.markAsCompleted(id, date);
         return ApiResponse.builder()
                 .status(200)
                 .message("Đã cập nhật trạng thái uống thuốc thành COMPLETED")

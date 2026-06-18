@@ -14,5 +14,5 @@ public interface MedicationService {
     // phân tách api cho giáo viên, cần map thêm cảnh báo dị ứng từ profile học sinh
     List<MedicationResponse> getClassRequests(Long classId, LocalDate date);
 
-    void markAsCompleted(Long id);
+    void markAsCompleted(Long id, LocalDate date);
 }

@@ -33,4 +33,8 @@ public interface DailyLogRepository extends JpaRepository<DailyLog, Long> {
             @Param("classId") Long classId,
             @Param("startDate") java.time.LocalDate startDate,
             @Param("endDate") java.time.LocalDate endDate);
+
+    // Tìm các bản ghi có check-in nhưng chưa có check-out trong một ngày cụ thể
+    @Query("SELECT d FROM DailyLog d JOIN FETCH d.child c JOIN FETCH d.schoolClass sc WHERE d.date = :date AND d.checkInTime IS NOT NULL AND d.checkOutTime IS NULL")
+    List<DailyLog> findLogsWithoutCheckout(@Param("date") LocalDate date);
 }

@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "medication_requests")
@@ -43,4 +45,9 @@ public class MedicationRequest extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private RequestStatus status = RequestStatus.PENDING; // Mặc định khi tạo là PENDING
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "medication_confirmations", joinColumns = @JoinColumn(name = "request_id"))
+    @Column(name = "confirmed_date")
+    private Set<LocalDate> confirmedDates = new HashSet<>();
 }

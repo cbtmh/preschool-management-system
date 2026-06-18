@@ -136,6 +136,25 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                     request.getEndDate()
             );
         }
+
+        try {
+            Long currentUserId = securityService.getCurrentUser().getId();
+            String statusText = RequestStatus.APPROVED.name().equals(status) ? "Đã duyệt" : "Từ chối";
+            
+            Long recipientId = request.getChild().getParent().getUser().getId();
+            
+            notificationService.sendNotificationToUserWithRef(
+                    "Cập nhật đơn xin nghỉ",
+                    "Đơn xin nghỉ của bé " + request.getChild().getFullName() + " đã được giáo viên cập nhật thành: " + statusText + ".",
+                    NotificationType.INDIVIDUAL,
+                    currentUserId,
+                    recipientId,
+                    "LEAVE_REQUEST",
+                    request.getId()
+            );
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gửi thông báo cập nhật đơn xin nghỉ: " + e.getMessage());
+        }
     }
 
     private LeaveRequestResponse mapToResponse(LeaveRequest entity) {
