@@ -47,7 +47,7 @@ const NewsManagement = () => {
   // Pagination
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const size = 10;
+  const size = 5; // Reduced to 5 so it's easier to see pagination
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as any,
@@ -228,7 +228,7 @@ const NewsManagement = () => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div className="mt-4">
               <Pagination>
                 <PaginationContent>
