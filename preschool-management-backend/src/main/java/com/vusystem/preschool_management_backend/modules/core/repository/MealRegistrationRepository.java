@@ -32,17 +32,18 @@ public interface MealRegistrationRepository extends JpaRepository<MealRegistrati
     List<MealRegistration> findMealRegistrationsByClassAndDate(@Param("classId") Long classId, @Param("date") LocalDate date);
     
     // 4. Thống kê tổng số suất ăn theo loại (Sáng, Trưa, Xế) của toàn trường trong 1 khoảng thời gian (Dành cho Admin/Nhà bếp)
-    @Query("SELECT mr.mealType, COUNT(mr) FROM MealRegistration mr " +
+    @Query(value = "SELECT mr.meal_type, COUNT(mr.id) FROM meal_registrations mr " +
            "WHERE mr.date >= :startDate AND mr.date <= :endDate AND mr.status = :status " +
-           "GROUP BY mr.mealType")
-    List<Object[]> countRegisteredMealsByDateRangeGroupByType(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("status") com.vusystem.preschool_management_backend.common.entity.enums.MealRegStatus status);
+           "GROUP BY mr.meal_type", nativeQuery = true)
+    List<Object[]> countRegisteredMealsByDateRangeGroupByType(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("status") String status);
 
     //5. thống kê suất ăn
-    @Query("SELECT mr.child.id, mr.child.fullName, mr.status, mr.mealType, COUNT(mr.id) " +
-           "FROM MealRegistration mr " +
-           "WHERE mr.child.id IN (SELECT e.child.id FROM Enrollment e WHERE e.schoolClass.id = :classId) " +
+    @Query(value = "SELECT c.id, c.full_name, mr.status, mr.meal_type, COUNT(mr.id) " +
+           "FROM meal_registrations mr " +
+           "JOIN children c ON mr.child_id = c.id " +
+           "WHERE mr.child_id IN (SELECT e.child_id FROM enrollments e WHERE e.class_id = :classId) " +
            "AND mr.date >= :startDate AND mr.date <= :endDate " +
-           "GROUP BY mr.child.id, mr.child.fullName, mr.status, mr.mealType")
+           "GROUP BY c.id, c.full_name, mr.status, mr.meal_type", nativeQuery = true)
     List<Object[]> countMonthlyMealStatsForClass(
             @Param("classId") Long classId,
             @Param("startDate") java.time.LocalDate startDate,

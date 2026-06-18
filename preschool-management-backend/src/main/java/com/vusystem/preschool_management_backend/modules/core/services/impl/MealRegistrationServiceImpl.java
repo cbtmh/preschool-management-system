@@ -223,7 +223,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
     @Override
     public MealStatisticsResponse getMealStatistics(LocalDate startDate, LocalDate endDate) {
-        List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate, MealRegStatus.REGISTERED);
+        List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate, MealRegStatus.REGISTERED.name());
         
         long breakfastCount = 0;
         long lunchCount = 0;
@@ -232,18 +232,31 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         for (Object[] row : results) {
             if (row[0] == null || row[1] == null) continue;
             
-            String mealType = row[0].toString();
+            String mealType = "";
+            if (row[0] instanceof MealType) {
+                mealType = ((MealType) row[0]).name();
+            } else if (row[0] instanceof Number) {
+                int ordinal = ((Number) row[0]).intValue();
+                if (ordinal >= 0 && ordinal < MealType.values().length) {
+                    mealType = MealType.values()[ordinal].name();
+                }
+            } else if (row[0] instanceof byte[]) {
+                mealType = new String((byte[]) row[0]).trim().toUpperCase();
+            } else {
+                mealType = row[0].toString().trim().toUpperCase();
+            }
+            
             long count = ((Number) row[1]).longValue();
 
             switch (mealType) {
                 case "BREAKFAST":
-                    breakfastCount = count;
+                    breakfastCount += count;
                     break;
                 case "LUNCH":
-                    lunchCount = count;
+                    lunchCount += count;
                     break;
                 case "SNACK":
-                    snackCount = count;
+                    snackCount += count;
                     break;
             }
         }
@@ -270,9 +283,31 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         Map<Long, ChildMonthlyMealStatsResponse> statsMap = new LinkedHashMap<>();
 
         for (Object[] row : rawStats) {
-            Long childId = (Long) row[0];
+            Long childId = ((Number) row[0]).longValue();
             String childFullName = (String) row[1];
-            MealRegStatus status = (MealRegStatus) row[2]; // Ép kiểu về đúng Enum MealRegStatus của dự án
+            
+            MealRegStatus status = null;
+            if (row[2] instanceof MealRegStatus) {
+                status = (MealRegStatus) row[2];
+            } else if (row[2] instanceof Number) {
+                int ordinal = ((Number) row[2]).intValue();
+                if (ordinal >= 0 && ordinal < MealRegStatus.values().length) {
+                    status = MealRegStatus.values()[ordinal];
+                }
+            } else if (row[2] instanceof byte[]) {
+                try {
+                    status = MealRegStatus.valueOf(new String((byte[]) row[2]).trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    // Ignore
+                }
+            } else if (row[2] != null) {
+                try {
+                    status = MealRegStatus.valueOf(row[2].toString().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    // Ignore or log error, status remains null
+                }
+            }
+            
             long count = ((Number) row[4]).longValue();
 
             ChildMonthlyMealStatsResponse studentStats = statsMap.computeIfAbsent(childId, id -> 
@@ -285,9 +320,9 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
             );
 
             if (status == MealRegStatus.REGISTERED) {
-                studentStats.setTotalRegistered(count);
+                studentStats.setTotalRegistered(studentStats.getTotalRegistered() + count);
             } else if (status == MealRegStatus.CANCELLED) {
-                studentStats.setTotalCancelled(count);
+                studentStats.setTotalCancelled(studentStats.getTotalCancelled() + count);
             }
         }
 
