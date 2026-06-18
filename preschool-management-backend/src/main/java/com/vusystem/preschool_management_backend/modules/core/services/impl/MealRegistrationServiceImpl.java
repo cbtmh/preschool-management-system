@@ -19,6 +19,7 @@ import com.vusystem.preschool_management_backend.modules.core.services.MealRegis
 import com.vusystem.preschool_management_backend.modules.core.repository.SchoolClassRepository;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MealRegistrationServiceImpl implements MealRegistrationService {
@@ -223,14 +225,24 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
     @Override
     public MealStatisticsResponse getMealStatistics(LocalDate startDate, LocalDate endDate) {
+        log.info("[MealStats] Querying statistics from {} to {} with status={}", startDate, endDate, MealRegStatus.REGISTERED.name());
+        
         List<Object[]> results = mealRegistrationRepository.countRegisteredMealsByDateRangeGroupByType(startDate, endDate, MealRegStatus.REGISTERED.name());
+        
+        log.info("[MealStats] Query returned {} rows", results.size());
         
         long breakfastCount = 0;
         long lunchCount = 0;
         long snackCount = 0;
 
         for (Object[] row : results) {
-            if (row[0] == null || row[1] == null) continue;
+            if (row[0] == null || row[1] == null) {
+                log.warn("[MealStats] Skipping row with null value: row[0]={}, row[1]={}", row[0], row[1]);
+                continue;
+            }
+            
+            log.info("[MealStats] Row data: row[0] type={}, value='{}', row[1] type={}, value='{}'",
+                row[0].getClass().getName(), row[0], row[1].getClass().getName(), row[1]);
             
             String mealType = "";
             if (row[0] instanceof MealType) {
