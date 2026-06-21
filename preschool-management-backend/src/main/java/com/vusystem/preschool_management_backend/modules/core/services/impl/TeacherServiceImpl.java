@@ -13,6 +13,7 @@ import com.vusystem.preschool_management_backend.modules.core.repository.Teacher
 import com.vusystem.preschool_management_backend.modules.core.repository.ClassTeacherRepository;
 import com.vusystem.preschool_management_backend.common.entity.academic.ClassTeacher;
 import com.vusystem.preschool_management_backend.modules.core.services.TeacherService;
+import com.vusystem.preschool_management_backend.modules.auth.repository.RefreshTokenRepository;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class TeacherServiceImpl implements TeacherService {
     private final UserService userService;
     private final UserRepository userRepository; // inject thêm để xử lý soft delete account khi xóa teacher
     private final ClassTeacherRepository classTeacherRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
@@ -123,6 +125,9 @@ public class TeacherServiceImpl implements TeacherService {
         User user = teacher.getUser();
         user.setIsActive(false); 
         userRepository.save(user); 
+        
+        // xóa tất cả refresh token của user để ngăn chặn việc tiếp tục xin cấp mới token
+        refreshTokenRepository.deleteByUser_Id(user.getId());
     }
 
     

@@ -25,6 +25,9 @@ public interface ChildRepository extends JpaRepository<Child, Long> {
            "(SELECT e FROM Enrollment e WHERE e.child = c AND e.academicYear.id = :academicYearId)")
     List<Child> findActiveChildrenWithoutEnrollmentInYear(@Param("academicYearId") Long academicYearId);
 
+    @Query("SELECT COUNT(c) FROM Child c WHERE c.status IN ('STUDYING', 'RESERVED')")
+    long countActiveChildren();
+
     // 4. Kiểm tra xem bé đã tồn tại trong DB chưa (tránh trùng lặp khi import Excel)
     boolean existsByFullNameAndDobAndParentId(String fullName, java.time.LocalDate dob, Long parentId);
 }

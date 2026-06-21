@@ -18,9 +18,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardStatisticsResponse getDashboardStatistics() {
-        long totalStudents = childRepository.count();
+        long totalStudents = childRepository.countActiveChildren();
         long totalClasses = schoolClassRepository.count();
-        long totalTeachers = teacherRepository.count();
+        long totalTeachers = teacherRepository.countActiveTeachers();
 
         return DashboardStatisticsResponse.builder()
                 .totalStudents(totalStudents)

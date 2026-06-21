@@ -16,4 +16,7 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
     // Lấy danh sách giáo viên có tài khoản đang active (Soft Delete)
     @Query("SELECT t FROM Teacher t WHERE t.user.isActive = true")
     List<Teacher> findAllActiveTeachers();
+
+    @Query("SELECT COUNT(t) FROM Teacher t WHERE t.user.isActive = true")
+    long countActiveTeachers();
 }

@@ -192,6 +192,12 @@ public class AuthServiceImpl implements AuthService {
             }
             
             User user = refreshToken.getUser();
+            
+            if (!user.getIsActive()) {
+                refreshTokenRepository.delete(refreshToken);
+                throw new RuntimeException("Tài khoản đã bị vô hiệu hóa. Không thể làm mới token.");
+            }
+            
             Map<String, Object> extraClaims = new HashMap<>();
             extraClaims.put("role", user.getRole().name());
             extraClaims.put("userId", user.getId());
