@@ -159,7 +159,7 @@ public class DailyLogServiceImpl implements DailyLogService {
             final String checkInStr = item.getCheckInTime() != null ? item.getCheckInTime().toString() : "";
             final String checkOutStr = item.getCheckOutTime() != null ? item.getCheckOutTime().toString() : "";
 
-            if (notifyCheckIn || notifyCheckOut) {
+            if ((notifyCheckIn || notifyCheckOut) && date.isEqual(today)) {
                 notificationsToSend.add(() -> {
                     Child c = logRef.getChild();
                     if (c != null && c.getParent() != null && c.getParent().getUser() != null) {

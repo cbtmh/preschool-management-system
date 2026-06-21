@@ -86,7 +86,7 @@ export default function TeacherMedicationScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              await medicationService.markAsCompleted(id);
+              await medicationService.markAsCompleted(id, dateStr);
               await loadData(dateStr);
               Alert.alert('Thành công', 'Đã cập nhật trạng thái dặn thuốc.');
             } catch (error) {

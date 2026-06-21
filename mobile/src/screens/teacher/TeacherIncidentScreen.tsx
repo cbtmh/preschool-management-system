@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -96,6 +96,35 @@ export default function TeacherIncidentScreen() {
       default: return severity;
     }
   };
+
+  const markedDates = useMemo(() => {
+    const dates: Record<string, any> = {};
+    
+    incidents.forEach(incident => {
+      const d = new Date(incident.incidentTime);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      if (!dates[dateString]) {
+        dates[dateString] = { marked: true, dotColor: getStatusColor(incident.status) };
+      } else {
+        if (incident.status === 'NEW' || (incident.status === 'IN_PROGRESS' && dates[dateString].dotColor !== getStatusColor('NEW'))) {
+          dates[dateString].dotColor = getStatusColor(incident.status);
+        }
+      }
+    });
+
+    const selectedDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    if (dates[selectedDateStr]) {
+      dates[selectedDateStr] = { ...dates[selectedDateStr], selected: true, selectedColor: '#0ea5e9' };
+    } else {
+      dates[selectedDateStr] = { selected: true, selectedColor: '#0ea5e9' };
+    }
+
+    return dates;
+  }, [incidents, date]);
 
   // lọc sự cố theo ngày
   const filteredIncidents = incidents.filter(incident => {
@@ -225,9 +254,12 @@ export default function TeacherIncidentScreen() {
                 generateWeekDates(newDate);
                 setShowHistoryModal(false);
               }}
+              markedDates={markedDates}
               theme={{
                 todayTextColor: '#0ea5e9',
-                arrowColor: '#0ea5e9'
+                arrowColor: '#0ea5e9',
+                selectedDayBackgroundColor: '#0ea5e9',
+                dotColor: '#0ea5e9'
               }}
             />
           </View>

@@ -1,11 +1,44 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { teacherService } from '../../services/teacher.service';
 import { leaveRequestService, LeaveRequestResponse } from '../../services/leaveRequest.service';
 import { SchoolClassResponse } from '../../types/teacher';
+
+LocaleConfig.locales['vi'] = {
+  monthNames: ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'],
+  monthNamesShort: ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'],
+  dayNames: ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'],
+  dayNamesShort: ['CN','T2','T3','T4','T5','T6','T7'],
+  today: 'Hôm nay'
+};
+LocaleConfig.defaultLocale = 'vi';
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN');
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'PENDING': return '#f59e0b';
+    case 'APPROVED': return '#10b981';
+    case 'REJECTED': return '#ef4444';
+    default: return '#64748b';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'PENDING': return 'Chờ duyệt';
+    case 'APPROVED': return 'Đã duyệt';
+    case 'REJECTED': return 'Từ chối';
+    default: return status;
+  }
+};
 
 export default function TeacherLeaveRequestScreen() {
   const navigation = useNavigation();
@@ -18,6 +51,8 @@ export default function TeacherLeaveRequestScreen() {
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadClasses();
@@ -85,6 +120,54 @@ export default function TeacherLeaveRequestScreen() {
     setRefreshing(true);
     loadRequests();
   };
+  const getDatesInRange = (startDate: string, endDate: string) => {
+    const dates = [];
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    current.setHours(0,0,0,0);
+    end.setHours(0,0,0,0);
+    while (current <= end) {
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      dates.push(`${year}-${month}-${day}`);
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const markedDates = useMemo(() => {
+    const dates: Record<string, any> = {};
+    
+    requests.forEach(req => {
+      const datesInRange = getDatesInRange(req.startDate, req.endDate);
+      datesInRange.forEach(dateString => {
+        if (!dates[dateString]) {
+          dates[dateString] = { marked: true, dotColor: getStatusColor(req.status) };
+        } else {
+          if (req.status === 'PENDING') {
+             dates[dateString].dotColor = getStatusColor('PENDING');
+          }
+        }
+      });
+    });
+
+    if (dates[selectedDate]) {
+      dates[selectedDate] = { ...dates[selectedDate], selected: true, selectedColor: '#f59e0b' };
+    } else {
+      dates[selectedDate] = { selected: true, selectedColor: '#f59e0b' };
+    }
+
+    return dates;
+  }, [requests, selectedDate]);
+
+  const displayedRequests = useMemo(() => {
+    if (viewMode === 'list') return requests;
+    return requests.filter(req => {
+      const datesInRange = getDatesInRange(req.startDate, req.endDate);
+      return datesInRange.includes(selectedDate);
+    });
+  }, [requests, viewMode, selectedDate]);
 
   const handleUpdateStatus = async (id: number, status: 'APPROVED' | 'REJECTED') => {
     try {
@@ -106,29 +189,6 @@ export default function TeacherLeaveRequestScreen() {
         { text: 'Đồng ý', onPress: () => handleUpdateStatus(id, status) }
       ]
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PENDING': return '#f59e0b';
-      case 'APPROVED': return '#10b981';
-      case 'REJECTED': return '#ef4444';
-      default: return '#64748b';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'PENDING': return 'Chờ duyệt';
-      case 'APPROVED': return 'Đã duyệt';
-      case 'REJECTED': return 'Từ chối';
-      default: return status;
-    }
   };
 
   const filteredClasses = selectedYear ? classes.filter(c => c.academicYearName === selectedYear) : classes;
@@ -183,7 +243,42 @@ export default function TeacherLeaveRequestScreen() {
             ) : (
               <Text style={styles.noClassText}>Bạn chưa được phân công lớp nào trong năm học này</Text>
             )}
+
+            {filteredClasses.length > 0 && (
+              <View style={styles.viewModeContainer}>
+                <TouchableOpacity 
+                  style={[styles.viewModeBtn, viewMode === 'list' && styles.viewModeBtnActive]}
+                  onPress={() => setViewMode('list')}
+                >
+                  <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : '#64748b'} />
+                  <Text style={[styles.viewModeText, viewMode === 'list' && styles.viewModeTextActive]}>Danh sách</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.viewModeBtn, viewMode === 'calendar' && styles.viewModeBtnActive]}
+                  onPress={() => setViewMode('calendar')}
+                >
+                  <Ionicons name="calendar" size={16} color={viewMode === 'calendar' ? '#fff' : '#64748b'} />
+                  <Text style={[styles.viewModeText, viewMode === 'calendar' && styles.viewModeTextActive]}>Lịch</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
+
+          {viewMode === 'calendar' && filteredClasses.length > 0 && (
+            <View style={styles.calendarContainer}>
+              <Calendar
+                current={selectedDate}
+                onDayPress={(day: any) => setSelectedDate(day.dateString)}
+                markedDates={markedDates}
+                theme={{
+                  selectedDayBackgroundColor: '#f59e0b',
+                  todayTextColor: '#f59e0b',
+                  arrowColor: '#f59e0b',
+                  dotColor: '#f59e0b',
+                }}
+              />
+            </View>
+          )}
 
           <ScrollView
             contentContainerStyle={styles.listContent}
@@ -191,8 +286,8 @@ export default function TeacherLeaveRequestScreen() {
           >
             {loadingRequests && !refreshing ? (
               <ActivityIndicator size="large" color="#f59e0b" style={{ marginTop: 40 }} />
-            ) : requests.length > 0 ? (
-              requests.map(request => (
+            ) : displayedRequests.length > 0 ? (
+              displayedRequests.map(request => (
                 <View key={request.id} style={styles.card}>
                   <View style={styles.cardHeader}>
                     <View style={styles.studentInfo}>
@@ -252,7 +347,11 @@ export default function TeacherLeaveRequestScreen() {
                 <View style={styles.emptyIconContainer}>
                   <Ionicons name="mail-unread-outline" size={48} color="#cbd5e1" />
                 </View>
-                <Text style={styles.emptyText}>Chưa có đơn xin nghỉ nào trong lớp này</Text>
+                <Text style={styles.emptyText}>
+                  {viewMode === 'calendar' 
+                    ? 'Không có đơn xin nghỉ nào trong ngày này'
+                    : 'Chưa có đơn xin nghỉ nào trong lớp này'}
+                </Text>
               </View>
             )}
           </ScrollView>
@@ -350,6 +449,40 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  viewModeContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  viewModeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    gap: 8,
+  },
+  viewModeBtnActive: {
+    backgroundColor: '#f59e0b',
+  },
+  viewModeText: {
+    color: '#64748b',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  viewModeTextActive: {
+    color: '#ffffff',
+  },
+  calendarContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    paddingBottom: 8,
   },
   listContent: {
     padding: 16,

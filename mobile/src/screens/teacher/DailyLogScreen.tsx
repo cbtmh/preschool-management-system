@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator,
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { teacherService } from '../../services/teacher.service';
 import { dailyLogService } from '../../services/dailyLog.service';
 import { SchoolClassResponse } from '../../types/teacher';
@@ -13,6 +14,7 @@ import { Calendar } from 'react-native-calendars';
 type TabType = 'meal' | 'sleep' | 'notes';
 
 export default function DailyLogScreen() {
+  const navigation = useNavigation<any>();
   const [classes, setClasses] = useState<SchoolClassResponse[]>([]);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
@@ -255,6 +257,9 @@ export default function DailyLogScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#0f172a" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Nhật ký hằng ngày</Text>
         <TouchableOpacity onPress={() => setShowHistoryModal(true)} style={styles.dateBtn}>
           <Ionicons name="calendar-outline" size={24} color="#3b82f6" />
@@ -433,6 +438,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#0f172a',
+  },
+  backBtn: {
+    padding: 4,
   },
   dateBtn: {
     padding: 4,

@@ -66,7 +66,23 @@ public class ReportServiceImpl implements ReportService {
         List<Object[]> attendanceStats = dailyLogRepository.countAttendanceStatsForClass(classId, startDate, endDate);
         for (Object[] stat : attendanceStats) {
             Long childId = ((Number) stat[0]).longValue();
-            AttendanceStatus status = (AttendanceStatus) stat[1];
+            AttendanceStatus status = null;
+            if (stat[1] instanceof AttendanceStatus) {
+                status = (AttendanceStatus) stat[1];
+            } else if (stat[1] instanceof Number) {
+                int ordinal = ((Number) stat[1]).intValue();
+                if (ordinal >= 0 && ordinal < AttendanceStatus.values().length) {
+                    status = AttendanceStatus.values()[ordinal];
+                }
+            } else if (stat[1] instanceof byte[]) {
+                try {
+                    status = AttendanceStatus.valueOf(new String((byte[]) stat[1]).trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            } else if (stat[1] != null) {
+                try {
+                    status = AttendanceStatus.valueOf(stat[1].toString().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {}
+            }
             Long count = ((Number) stat[2]).longValue();
 
             if (reportMap.containsKey(childId)) {

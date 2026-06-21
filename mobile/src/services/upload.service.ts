@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import axiosInstance from '../config/api.client';
 
@@ -37,25 +37,42 @@ export const uploadService = {
 
   uploadImageToBackend: async (uri: string): Promise<string> => {
     const formData = new FormData();
+    
+    // Fix cho Android: đảm bảo uri bắt đầu bằng file:///
+    const fileUri = Platform.OS === 'android' && !uri.startsWith('file:///') 
+      ? uri.replace('file://', 'file:///') 
+      : uri;
+
     formData.append('file', {
-      uri,
+      uri: fileUri,
       type: 'image/jpeg',
       name: `upload_${Date.now()}.jpg`
     } as any);
 
     try {
-      const response = await axiosInstance.post('/v1/upload/image', formData, {
+      // Axios trong React Native thường gặp lỗi Network Error với multipart/form-data
+      // Cách tốt nhất là sử dụng Fetch API gốc của React Native
+      const { store } = require('../store');
+      const token = store.getState().auth.token;
+      
+      const { API_URL } = require('../config/api');
+
+      const response = await fetch(`${API_URL}/v1/upload/image`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+          // KHÔNG set Content-Type, fetch sẽ tự set kèm boundary chính xác
         },
-        transformRequest: (data) => data,
+        body: formData
       });
 
-      if (response.data && response.data.data && response.data.data.url) {
-        return response.data.data.url;
+      const responseData = await response.json();
+
+      if (response.ok && responseData && responseData.data && responseData.data.url) {
+        return responseData.data.url;
       }
-      throw new Error('Upload failed: No URL returned');
+      throw new Error('Upload failed: ' + (responseData.message || 'Unknown error'));
     } catch (error) {
       console.error('Backend upload error:', error);
       throw error;

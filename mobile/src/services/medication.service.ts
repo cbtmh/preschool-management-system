@@ -47,7 +47,7 @@ export const medicationService = {
     return response.data.data;
   },
 
-  markAsCompleted: async (id: number): Promise<void> => {
-    await axiosInstance.put(`/mobile/medications/${id}/complete`);
+  markAsCompleted: async (id: number, date: string): Promise<void> => {
+    await axiosInstance.put(`/mobile/medications/${id}/complete`, null, { params: { date } });
   }
 };

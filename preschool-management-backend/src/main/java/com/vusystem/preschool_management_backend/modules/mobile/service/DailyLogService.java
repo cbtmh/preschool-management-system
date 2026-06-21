@@ -14,7 +14,6 @@ public interface DailyLogService {
 
     void batchUpdateDailyLogs(LocalDate date, DailyLogBatchUpdateRequest request);
 
-    // dùng cho luồng phụ huynh
     DailyLogResponse getDailyLogForChild(Long childId, LocalDate date);
 
     List<DailyLogHistoryResponse> getChildAttendanceHistory(Long childId, int year, int month);
