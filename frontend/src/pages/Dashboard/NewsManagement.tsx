@@ -14,11 +14,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Switch } from '../../components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Badge } from '../../components/ui/badge';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../../components/ui/pagination';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '../../components/ui/pagination';
 
 import { NewsService } from '../../services/news.service';
 import { News, NewsRequest } from '../../types/portal';
 import { BACKEND_URL } from '../../config/constants';
+import { generatePagination } from '../../lib/utils';
 
 const getImageUrl = (url: string | null | undefined) => {
   if (!url) return null;
@@ -239,15 +240,19 @@ const NewsManagement = () => {
                       className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
-                  {[...Array(totalPages)].map((_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink 
-                        onClick={() => setPage(i)}
-                        isActive={page === i}
-                        className="cursor-pointer"
-                      >
-                        {i + 1}
-                      </PaginationLink>
+                  {generatePagination(page + 1, totalPages).map((p, index) => (
+                    <PaginationItem key={index}>
+                      {p === '...' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink 
+                          onClick={() => setPage((p as number) - 1)}
+                          isActive={page === (p as number) - 1}
+                          className="cursor-pointer"
+                        >
+                          {p}
+                        </PaginationLink>
+                      )}
                     </PaginationItem>
                   ))}
                   <PaginationItem>

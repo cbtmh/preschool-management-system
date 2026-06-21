@@ -11,6 +11,7 @@ import { ChildResponse, ParentResponse } from '../types/user';
 import { SchoolClassResponse } from '../types/core';
 
 import { ImportExcelModal } from '../components/ImportExcelModal';
+import { generatePagination } from '../lib/utils';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -25,6 +26,7 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -64,7 +66,7 @@ const childSchema = z.object({
   allergyDeclared: z.boolean().default(false),
   allergies: z.array(z.object({
     allergen: z.string().min(1, "Tác nhân là bắt buộc"),
-    severity: z.string().min(1, "Mức độ là bắt buộc"),
+    severity: z.enum(["MILD", "MODERATE", "SEVERE", "CRITICAL"]),
     description: z.string().optional(),
   })).optional(),
 });
@@ -464,15 +466,19 @@ const Children = () => {
                 className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
               />
             </PaginationItem>
-            {Array.from({ length: totalPages }).map((_, index) => (
+            {generatePagination(currentPage, totalPages).map((page, index) => (
               <PaginationItem key={index}>
-                <PaginationLink 
-                  onClick={() => setCurrentPage(index + 1)}
-                  isActive={currentPage === index + 1}
-                  className="cursor-pointer"
-                >
-                  {index + 1}
-                </PaginationLink>
+                {page === '...' ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink 
+                    onClick={() => setCurrentPage(page as number)}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                )}
               </PaginationItem>
             ))}
             <PaginationItem>

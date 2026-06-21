@@ -20,6 +20,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { notificationService, Notification, SendNotificationRequest } from '../../services/notification.service';
 import { coreService } from '../../services/core.service';
 import { SchoolClassResponse } from '../../types/core';
+import { generatePagination } from '../../lib/utils';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề thông báo'),
@@ -239,29 +240,21 @@ const NotificationManagement = () => {
                     />
                   </PaginationItem>
                   
-                  {[...Array(totalPages)].map((_, i) => {
-                    if (totalPages <= 5 || i === 0 || i === totalPages - 1 || Math.abs(page - i) <= 1) {
-                      return (
-                        <PaginationItem key={i}>
-                          <PaginationLink 
-                            onClick={() => setPage(i)}
-                            isActive={page === i}
-                            className="cursor-pointer"
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    if (Math.abs(page - i) === 2) {
-                      return (
-                        <PaginationItem key={i}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-                    return null;
-                  })}
+                  {generatePagination(page + 1, totalPages).map((p, index) => (
+                    <PaginationItem key={index}>
+                      {p === '...' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink 
+                          onClick={() => setPage((p as number) - 1)}
+                          isActive={page === (p as number) - 1}
+                          className="cursor-pointer"
+                        >
+                          {p}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
 
                   <PaginationItem>
                     <PaginationNext 
