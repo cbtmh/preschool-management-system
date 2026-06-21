@@ -44,9 +44,6 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-gray-900">{stats?.totalStudents || 0}</div>
-                        <p className="text-xs text-green-600 font-medium mt-1">
-                            +12% so với năm trước
-                        </p>
                     </CardContent>
                 </Card>
 
@@ -59,9 +56,6 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-gray-900">{stats?.totalClasses || 0}</div>
-                        <p className="text-xs text-indigo-600 font-medium mt-1">
-                            Hoạt động ổn định
-                        </p>
                     </CardContent>
                 </Card>
 
@@ -74,9 +68,6 @@ const Dashboard = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-gray-900">{stats?.totalTeachers || 0}</div>
-                        <p className="text-xs text-green-600 font-medium mt-1">
-                            +4 giáo viên mới
-                        </p>
                     </CardContent>
                 </Card>
             </div>
