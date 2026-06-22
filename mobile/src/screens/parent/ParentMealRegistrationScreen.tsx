@@ -262,6 +262,7 @@ export default function ParentMealRegistrationScreen() {
           </View>
 
           <ScrollView 
+            style={{ flex: 1 }}
             contentContainerStyle={styles.content}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} />}
           >
@@ -304,7 +305,7 @@ export default function ParentMealRegistrationScreen() {
                   <View style={{ marginLeft: 12, flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginBottom: 4 }}>Báo cắt cơm theo ngày</Text>
                     <Text style={{ fontSize: 14, color: '#475569', lineHeight: 20 }}>
-                      Bạn có thể báo cắt cơm cho bé từng ngày cụ thể (VD: Khi bé ốm). Vui lòng thao tác trước 8:00 AM của ngày hôm đó để được hoàn trả tiền ăn.
+                      Bạn có thể báo cắt cơm cho bé từng ngày cụ thể (VD: Khi bé ốm). Vui lòng thao tác trước 8:00 AM của ngày hôm đó
                     </Text>
                   </View>
                 </View>
@@ -318,9 +319,10 @@ export default function ParentMealRegistrationScreen() {
                     const isLocked = isPast || isLockedToday;
                     
                     const dayRegs = groupedRegistrations[date] || [];
-                    const isRegistered = dayRegs.some(r => r.status === 'REGISTERED');
-                    // tìm xem đã đăng ký những bữa nào
-                    const registeredMeals = dayRegs.filter(r => r.status === 'REGISTERED').map(r => r.mealType);
+                    const allMeals = ['BREAKFAST', 'LUNCH', 'SNACK'];
+                    const cancelledMeals = dayRegs.filter(r => r.status === 'CANCELLED').map(r => r.mealType);
+                    const registeredMeals = allMeals.filter(m => !cancelledMeals.includes(m));
+                    const isRegistered = registeredMeals.length > 0;
                     
                     return (
                       <View key={date} style={[styles.dayCard, isToday && styles.dayCardToday]}>
@@ -412,7 +414,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#ffffff',
+    minHeight: 60,
     maxHeight: 60,
+    flexShrink: 0,
   },
   childChip: {
     paddingHorizontal: 16,

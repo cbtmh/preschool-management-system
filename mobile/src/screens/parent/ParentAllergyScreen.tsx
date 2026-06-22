@@ -12,6 +12,7 @@ export default function ParentAllergyScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [childId, setChildId] = useState<number | null>(route.params?.childId || null);
+  const [children, setChildren] = useState<ChildSummaryDTO[]>([]);
   const [currentChild, setCurrentChild] = useState<ChildSummaryDTO | null>(null);
 
 
@@ -33,7 +34,7 @@ export default function ParentAllergyScreen() {
         }
         foundChild = dashboardData.children.find(c => c.id === currentChildId) || dashboardData.children[0];
         setCurrentChild(foundChild);
-        
+        setChildren(dashboardData.children);
 
         if (foundChild) {
           setAllergyDeclared(foundChild.allergyDeclared || false);
@@ -91,7 +92,7 @@ export default function ParentAllergyScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [childId]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -111,6 +112,25 @@ export default function ParentAllergyScreen() {
         <Text style={styles.headerTitle}>Dị ứng của trẻ</Text>
         <View style={styles.placeholder} />
       </View>
+
+      {/* Child Selector */}
+      {children.length > 1 && (
+        <View style={{ flexShrink: 0, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childSelector}>
+            {children.map(child => (
+              <TouchableOpacity 
+                key={child.id}
+                style={[styles.childChip, childId === child.id && styles.childChipActive]}
+                onPress={() => setChildId(child.id)}
+              >
+                <Text style={[styles.childChipText, childId === child.id && styles.childChipTextActive]}>
+                  {child.fullName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {loading ? (
         <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -278,6 +298,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  childSelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    minHeight: 60,
+    maxHeight: 60,
+    flexShrink: 0,
+  },
+  childChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  childChipActive: {
+    backgroundColor: '#ffedd5',
+    borderColor: '#ea580c',
+  },
+  childChipText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  childChipTextActive: {
+    color: '#ea580c',
   },
   header: {
     flexDirection: 'row',

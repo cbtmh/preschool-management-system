@@ -14,6 +14,7 @@ export default function MedicationAdviceListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [childId, setChildId] = useState<number | null>(route.params?.childId || null);
+  const [children, setChildren] = useState<any[]>([]);
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -41,24 +42,24 @@ export default function MedicationAdviceListScreen() {
   const loadRequests = async () => {
     let currentChildId = childId;
     
-    // nếu chưa có childid (đi từ màn hình tiện ích)
-    if (!currentChildId) {
-      try {
-        const dashboardData = await parentDashboardService.getDashboardData();
-        if (dashboardData.children && dashboardData.children.length > 0) {
+    try {
+      const dashboardData = await parentDashboardService.getDashboardData();
+      if (dashboardData.children && dashboardData.children.length > 0) {
+        setChildren(dashboardData.children);
+        if (!currentChildId) {
           currentChildId = dashboardData.children[0].id;
           setChildId(currentChildId);
-        } else {
-          Alert.alert('Lỗi', 'Không tìm thấy thông tin học sinh.');
-          setLoading(false);
-          return;
         }
-      } catch (error) {
-        console.log('Lỗi tải thông tin học sinh:', error);
-        Alert.alert('Lỗi', 'Không thể lấy thông tin học sinh.');
+      } else {
+        Alert.alert('Lỗi', 'Không tìm thấy thông tin học sinh.');
         setLoading(false);
         return;
       }
+    } catch (error) {
+      console.log('Lỗi tải thông tin học sinh:', error);
+      Alert.alert('Lỗi', 'Không thể lấy thông tin học sinh.');
+      setLoading(false);
+      return;
     }
 
     try {
@@ -145,6 +146,25 @@ export default function MedicationAdviceListScreen() {
           <Ionicons name="calendar-outline" size={24} color="#ef4444" />
         </TouchableOpacity>
       </View>
+
+      {/* Child Selector */}
+      {children.length > 1 && (
+        <View style={{ flexShrink: 0, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childSelector}>
+            {children.map(child => (
+              <TouchableOpacity 
+                key={child.id}
+                style={[styles.childChip, childId === child.id && styles.childChipActive]}
+                onPress={() => setChildId(child.id)}
+              >
+                <Text style={[styles.childChipText, childId === child.id && styles.childChipTextActive]}>
+                  {child.fullName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Date Selector */}
       <View style={styles.dateSelectorContainer}>
@@ -249,6 +269,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#0f172a',
+  },
+  childSelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    minHeight: 60,
+    maxHeight: 60,
+    flexShrink: 0,
+  },
+  childChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  childChipActive: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#ef4444',
+  },
+  childChipText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  childChipTextActive: {
+    color: '#ef4444',
   },
   historyButton: {
     padding: 8,

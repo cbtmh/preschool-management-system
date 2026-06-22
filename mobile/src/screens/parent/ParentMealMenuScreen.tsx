@@ -131,6 +131,25 @@ export default function ParentMealMenuScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Child Selector */}
+      {children.length > 1 && (
+        <View style={{ flexShrink: 0, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childSelector}>
+            {children.map(child => (
+              <TouchableOpacity 
+                key={child.id}
+                style={[styles.childChip, selectedChildId === child.id && styles.childChipActive]}
+                onPress={() => setSelectedChildId(child.id)}
+              >
+                <Text style={[styles.childChipText, selectedChildId === child.id && styles.childChipTextActive]}>
+                  {child.fullName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {loading && !refreshing ? (
         <View style={[styles.tabContent, {justifyContent: 'center', alignItems: 'center'}]}>
           <ActivityIndicator size="large" color="#0ea5e9" />
@@ -248,6 +267,35 @@ const styles = StyleSheet.create({
   },
   historyButton: {
     padding: 4,
+  },
+  childSelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    minHeight: 60,
+    maxHeight: 60,
+    flexShrink: 0,
+  },
+  childChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  childChipActive: {
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0ea5e9',
+  },
+  childChipText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  childChipTextActive: {
+    color: '#0ea5e9',
   },
   tabContent: {
     flex: 1,

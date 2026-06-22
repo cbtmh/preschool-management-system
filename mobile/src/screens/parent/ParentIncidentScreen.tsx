@@ -2,9 +2,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { incidentService, IncidentReportResponse, SeverityLevel } from '../../services/incident.service';
-import { parentDashboardService } from '../../services/parentDashboard.service';
+import { parentDashboardService, ChildSummaryDTO } from '../../services/parentDashboard.service';
 import { Calendar } from 'react-native-calendars';
 
 export default function ParentIncidentScreen() {
@@ -12,7 +12,9 @@ export default function ParentIncidentScreen() {
   const [incidents, setIncidents] = useState<IncidentReportResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [childId, setChildId] = useState<number | null>(null);
+  const route = useRoute<any>();
+  const [childId, setChildId] = useState<number | null>(route.params?.childId || null);
+  const [children, setChildren] = useState<ChildSummaryDTO[]>([]);
 
 
   const [date, setDate] = useState<Date>(new Date());
@@ -41,8 +43,12 @@ export default function ParentIncidentScreen() {
     try {
       const dashboardData = await parentDashboardService.getDashboardData();
       if (dashboardData && dashboardData.children && dashboardData.children.length > 0) {
-        const currentChildId = dashboardData.children[0].id;
-        setChildId(currentChildId);
+        setChildren(dashboardData.children);
+        let currentChildId = childId;
+        if (!currentChildId) {
+          currentChildId = dashboardData.children[0].id;
+          setChildId(currentChildId);
+        }
         const data = await incidentService.getParentIncidents(currentChildId);
         setIncidents(data);
       }
@@ -58,7 +64,7 @@ export default function ParentIncidentScreen() {
     useCallback(() => {
       setLoading(true);
       loadData();
-    }, [])
+    }, [childId])
   );
 
   const onRefresh = () => {
@@ -106,6 +112,25 @@ export default function ParentIncidentScreen() {
           <Ionicons name="calendar-outline" size={24} color="#0ea5e9" />
         </TouchableOpacity>
       </View>
+
+      {/* Child Selector */}
+      {children.length > 1 && (
+        <View style={{ flexShrink: 0, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childSelector}>
+            {children.map(child => (
+              <TouchableOpacity 
+                key={child.id}
+                style={[styles.childChip, childId === child.id && styles.childChipActive]}
+                onPress={() => setChildId(child.id)}
+              >
+                <Text style={[styles.childChipText, childId === child.id && styles.childChipTextActive]}>
+                  {child.fullName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <View style={styles.disclaimerBox}>
         <Ionicons name="shield-checkmark" size={20} color="#10b981" />
@@ -242,6 +267,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#0f172a',
+  },
+  childSelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    minHeight: 60,
+    maxHeight: 60,
+    flexShrink: 0,
+  },
+  childChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  childChipActive: {
+    backgroundColor: '#e0f2fe',
+    borderColor: '#0ea5e9',
+  },
+  childChipText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  childChipTextActive: {
+    color: '#0ea5e9',
   },
   disclaimerBox: {
     flexDirection: 'row',
