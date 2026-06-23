@@ -34,6 +34,10 @@ export const mealRegistrationService = {
     await axiosInstance.post(`/core/meal-registrations/daily`, request);
   },
 
+  overrideDailyRegistration: async (request: DailyMealRegistrationRequest): Promise<void> => {
+    await axiosInstance.post(`/core/meal-registrations/override/daily`, request);
+  },
+
   getRegistrationsByChildAndDateRange: async (childId: number, startDate: string, endDate: string): Promise<MealRegistrationResponse[]> => {
     const response = await axiosInstance.get(`/core/meal-registrations/child/${childId}`, {
       params: { startDate, endDate }

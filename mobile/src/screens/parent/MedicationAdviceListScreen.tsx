@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -84,23 +85,38 @@ export default function MedicationAdviceListScreen() {
     loadRequests();
   };
 
-  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDateStr = dayjs(selectedDate).format('YYYY-MM-DD');
   const filteredRequests = requests.filter(req => {
     return req.startDate <= selectedDateStr && req.endDate >= selectedDateStr;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return '#22c55e';
-      default: return '#f59e0b';
+      case 'COMPLETED': return '#22c55e'; // Green
+      case 'IN_PROGRESS': return '#3b82f6'; // Blue
+      case 'APPROVED': return '#0ea5e9'; // Sky blue
+      case 'REJECTED':
+      case 'CANCELLED': return '#ef4444'; // Red
+      default: return '#f59e0b'; // Orange
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'COMPLETED': return 'Đã hoàn thành';
-      default: return 'Chờ duyệt / Đang xử lý';
+      case 'IN_PROGRESS': return 'Đang thực hiện';
+      case 'APPROVED': return 'Đã duyệt';
+      case 'REJECTED': return 'Từ chối';
+      case 'CANCELLED': return 'Đã hủy';
+      default: return 'Chờ duyệt';
     }
+  };
+
+  const calculateTotalDays = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const renderItem = ({ item }: { item: MedicationResponse }) => (
@@ -129,6 +145,36 @@ export default function MedicationAdviceListScreen() {
         <Text style={styles.medicationName}>Thuốc: {item.medicationName}</Text>
         <Text style={styles.dosageText}>Liều lượng: {item.dosage}</Text>
       </View>
+      
+      {(() => {
+        const totalDays = calculateTotalDays(item.startDate, item.endDate);
+        const confirmedCount = item.confirmedDates ? item.confirmedDates.length : 0;
+        const progressPercent = totalDays > 0 ? (confirmedCount / totalDays) * 100 : 0;
+        
+        if (totalDays > 1 || item.status === 'IN_PROGRESS') {
+          return (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>Tiến độ uống thuốc:</Text>
+                <Text style={styles.progressText}>{confirmedCount}/{totalDays} ngày</Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+              </View>
+              {item.confirmedDates && item.confirmedDates.length > 0 && (
+                <Text style={styles.confirmedDatesText}>
+                  Đã uống: {item.confirmedDates.map(d => {
+                    const dateObj = new Date(d);
+                    return `${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
+                  }).join(', ')}
+                </Text>
+              )}
+            </View>
+          );
+        }
+        return null;
+      })()}
+
       {item.notes ? (
         <Text style={styles.reasonText}>Lời dặn: {item.notes}</Text>
       ) : null}
@@ -224,7 +270,7 @@ export default function MedicationAdviceListScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={selectedDate.toISOString().split('T')[0]}
+              current={dayjs(selectedDate).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 generateWeekDates(newDate);
@@ -412,6 +458,47 @@ const styles = StyleSheet.create({
     color: '#64748b',
     lineHeight: 20,
     marginTop: 4,
+  },
+  progressContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    backgroundColor: '#f8fafc',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  progressLabel: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  progressText: {
+    fontSize: 13,
+    color: '#3b82f6',
+    fontWeight: 'bold',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#3b82f6',
+    borderRadius: 3,
+  },
+  confirmedDatesText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
   },
   emptyText: {
     textAlign: 'center',

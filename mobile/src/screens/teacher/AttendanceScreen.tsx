@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -89,7 +90,7 @@ export default function AttendanceScreen() {
     if (!selectedClass) return;
     try {
       setLoading(true);
-      const formattedDate = date.toISOString().split('T')[0];
+      const formattedDate = dayjs(date).format('YYYY-MM-DD');
       const fetchedLogs = await dailyLogService.getDailyLogsForClass(selectedClass.id, formattedDate);
       
       setStudents(fetchedLogs);
@@ -118,7 +119,7 @@ export default function AttendanceScreen() {
     if (!selectedClass) return;
     try {
       setSaving(true);
-      const formattedDate = date.toISOString().split('T')[0];
+      const formattedDate = dayjs(date).format('YYYY-MM-DD');
       await dailyLogService.batchUpdateDailyLogs(formattedDate, {
         classId: selectedClass.id,
         logs: Object.values(logs)
@@ -482,7 +483,7 @@ export default function AttendanceScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={date.toISOString().split('T')[0]}
+              current={dayjs(date).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 setDate(newDate);

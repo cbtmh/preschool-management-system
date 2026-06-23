@@ -15,7 +15,7 @@ export interface LeaveRequestResponse {
   startDate: string;
   endDate: string;
   reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 }
 
 export const leaveRequestService = {
@@ -47,5 +47,9 @@ export const leaveRequestService = {
       null,
       { params: { status } }
     );
+  },
+
+  cancelRequest: async (id: number): Promise<void> => {
+    await axiosInstance.put(`/mobile/leave-requests/${id}/cancel`);
   }
 };

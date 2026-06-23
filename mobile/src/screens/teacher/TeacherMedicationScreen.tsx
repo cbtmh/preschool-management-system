@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,7 +38,7 @@ export default function TeacherMedicationScreen() {
     setSelectedDate(baseDate);
   };
 
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
 
   const loadData = async (dateStr: string) => {
     try {
@@ -244,7 +245,7 @@ export default function TeacherMedicationScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={selectedDate.toISOString().split('T')[0]}
+              current={dayjs(selectedDate).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 generateWeekDates(newDate);

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -223,7 +224,7 @@ export default function ParentIncidentScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={date.toISOString().split('T')[0]}
+              current={dayjs(date).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 setDate(newDate);

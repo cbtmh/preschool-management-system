@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
@@ -94,7 +95,7 @@ export default function ParentMealMenuScreen() {
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
   const todaysMenu = weeklyMenus.filter(m => m.date === dateStr);
 
   const getMealLabel = (type: string) => {
@@ -224,7 +225,7 @@ export default function ParentMealMenuScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={selectedDate.toISOString().split('T')[0]}
+              current={dayjs(selectedDate).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 generateWeekDates(newDate);

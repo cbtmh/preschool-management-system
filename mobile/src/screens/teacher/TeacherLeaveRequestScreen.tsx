@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ const getStatusColor = (status: string) => {
     case 'PENDING': return '#f59e0b';
     case 'APPROVED': return '#10b981';
     case 'REJECTED': return '#ef4444';
+    case 'CANCELLED': return '#94a3b8';
     default: return '#64748b';
   }
 };
@@ -36,6 +38,7 @@ const getStatusText = (status: string) => {
     case 'PENDING': return 'Chờ duyệt';
     case 'APPROVED': return 'Đã duyệt';
     case 'REJECTED': return 'Từ chối';
+    case 'CANCELLED': return 'Đã hủy';
     default: return status;
   }
 };
@@ -52,7 +55,7 @@ export default function TeacherLeaveRequestScreen() {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
 
   useEffect(() => {
     loadClasses();

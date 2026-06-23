@@ -19,8 +19,9 @@ export interface MedicationResponse {
   startDate: string;
   endDate: string;
   notes: string;
-  status: 'PENDING' | 'COMPLETED';
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
   allergies?: string[];
+  confirmedDates?: string[];
 }
 
 export const medicationService = {

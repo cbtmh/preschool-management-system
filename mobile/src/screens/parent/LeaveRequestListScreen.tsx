@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -89,6 +90,7 @@ export default function LeaveRequestListScreen() {
     switch (status) {
       case 'APPROVED': return '#22c55e';
       case 'REJECTED': return '#ef4444';
+      case 'CANCELLED': return '#94a3b8';
       default: return '#f59e0b';
     }
   };
@@ -97,27 +99,74 @@ export default function LeaveRequestListScreen() {
     switch (status) {
       case 'APPROVED': return 'Đã duyệt';
       case 'REJECTED': return 'Từ chối';
+      case 'CANCELLED': return 'Đã hủy';
       default: return 'Chờ duyệt';
     }
   };
 
-  const renderItem = ({ item }: { item: LeaveRequestResponse }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.dateContainer}>
-          <Ionicons name="calendar-outline" size={18} color="#64748b" />
-          <Text style={styles.dateText}>
-            {new Date(item.startDate).toLocaleDateString('vi-VN')} 
-            {item.startDate !== item.endDate ? ` - ${new Date(item.endDate).toLocaleDateString('vi-VN')}` : ''}
-          </Text>
+  const handleCancelRequest = (id: number) => {
+    Alert.alert(
+      "Xác nhận hủy",
+      "Bạn có chắc chắn muốn hủy đơn xin nghỉ này không?",
+      [
+        { text: "Không", style: "cancel" },
+        { 
+          text: "Có, hủy đơn", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await leaveRequestService.cancelRequest(id);
+              Alert.alert(
+                "Thành công", 
+                "Hủy đơn xin nghỉ thành công!\n\n⚠️ LƯU Ý QUAN TRỌNG: Vui lòng kiểm tra lại trạng thái đăng ký suất ăn của bé để tránh sai sót."
+              );
+              loadRequests();
+            } catch (error: any) {
+              setLoading(false);
+              const msg = error.response?.data?.message || "Không thể hủy đơn lúc này.";
+              Alert.alert("Lỗi", msg);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderItem = ({ item }: { item: LeaveRequestResponse }) => {
+    const today = dayjs().format('YYYY-MM-DD');
+    const canCancel = item.status === 'PENDING' || (item.status === 'APPROVED' && item.startDate > today);
+    
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.dateContainer}>
+            <Ionicons name="calendar-outline" size={18} color="#64748b" />
+            <Text style={styles.dateText}>
+              {new Date(item.startDate).toLocaleDateString('vi-VN')} 
+              {item.startDate !== item.endDate ? ` - ${new Date(item.endDate).toLocaleDateString('vi-VN')}` : ''}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</Text>
-        </View>
+        <Text style={styles.reasonText}>{item.reason}</Text>
+        
+        {canCancel && (
+          <View style={styles.cardFooter}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => handleCancelRequest(item.id)}
+            >
+              <Ionicons name="close-circle-outline" size={16} color="#ef4444" style={{marginRight: 4}} />
+              <Text style={styles.cancelButtonText}>Hủy đơn</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-      <Text style={styles.reasonText}>{item.reason}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -183,7 +232,7 @@ export default function LeaveRequestListScreen() {
       ) : (
         <FlatList
           data={requests.filter(req => {
-            const selected = selectedDate.toISOString().split('T')[0];
+            const selected = dayjs(selectedDate).format('YYYY-MM-DD');
             return selected >= req.startDate && selected <= req.endDate;
           })}
           keyExtractor={(item) => item.id.toString()}
@@ -213,7 +262,7 @@ export default function LeaveRequestListScreen() {
               </TouchableOpacity>
             </View>
             <Calendar
-              current={selectedDate.toISOString().split('T')[0]}
+              current={dayjs(selectedDate).format('YYYY-MM-DD')}
               onDayPress={(day: any) => {
                 const newDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
                 generateWeekDates(newDate);
@@ -417,5 +466,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#0f172a',
+  },
+  cardFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  cancelButtonText: {
+    color: '#ef4444',
+    fontSize: 13,
+    fontWeight: '600',
   }
 });

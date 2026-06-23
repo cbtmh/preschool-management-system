@@ -23,6 +23,14 @@ export default function ParentMealRegistrationScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('DAILY');
   const [registrations, setRegistrations] = useState<MealRegistrationResponse[]>([]);
   
+  const [dailyModalVisible, setDailyModalVisible] = useState(false);
+  const [selectedDailyDate, setSelectedDailyDate] = useState<string | null>(null);
+  const [dailyMealConfig, setDailyMealConfig] = useState({
+    BREAKFAST: true,
+    LUNCH: true,
+    SNACK: true
+  });
+  
 
   const [selectedMonth, setSelectedMonth] = useState(dayjs().month() + 1);
   const [selectedYear, setSelectedYear] = useState(dayjs().year());
@@ -109,28 +117,31 @@ export default function ParentMealRegistrationScreen() {
     }
   };
 
-  const handleDailySubmit = async (date: string, isRegistered: boolean) => {
-    if (!currentChild) return;
+  const openDailyModal = (date: string, registeredMeals: string[]) => {
+    setSelectedDailyDate(date);
+    setDailyMealConfig({
+      BREAKFAST: registeredMeals.includes('BREAKFAST'),
+      LUNCH: registeredMeals.includes('LUNCH'),
+      SNACK: registeredMeals.includes('SNACK')
+    });
+    setDailyModalVisible(true);
+  };
 
-    // kiểm tra điều kiện trước khi gửi
+  const handleDailySubmit = async () => {
+    if (!currentChild || !selectedDailyDate) return;
+
+    const date = selectedDailyDate;
     const targetDate = dayjs(date);
     const today = dayjs();
     
-    if (targetDate.isBefore(today, 'day')) {
-      Alert.alert('Lỗi', 'Không thể chỉnh sửa suất ăn trong quá khứ.');
-      return;
-    }
-    
-    if (targetDate.isSame(today, 'day') && dayjs().hour() >= 8) {
-      Alert.alert('Lỗi', 'Đã quá 8h00 sáng, không thể thay đổi thông tin hôm nay.');
+    if (targetDate.isBefore(today, 'day') || targetDate.isSame(today, 'day')) {
+      Alert.alert('Lỗi', 'Đã hết hạn đăng ký suất ăn. Chỉ có thể đăng ký hoặc báo cắt cơm cho ngày mai trở đi.');
       return;
     }
 
-    const selectedTypes = Object.keys(mealTypes).filter(k => mealTypes[k as keyof typeof mealTypes]);
-    if (selectedTypes.length === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn bữa ăn trong cấu hình để áp dụng.');
-      return;
-    }
+    const selectedTypes = Object.keys(dailyMealConfig).filter(k => dailyMealConfig[k as keyof typeof dailyMealConfig]);
+    const isRegistered = selectedTypes.length > 0;
+    const typesToSend = isRegistered ? selectedTypes : ['BREAKFAST', 'LUNCH', 'SNACK'];
 
     try {
       setProcessing(true);
@@ -138,15 +149,57 @@ export default function ParentMealRegistrationScreen() {
         childId: currentChild.id,
         date: date,
         isRegistered,
-        mealTypes: selectedTypes
+        mealTypes: typesToSend
       });
-      Alert.alert('Thành công', `Đã ${isRegistered ? 'đăng ký lại' : 'báo cắt cơm'} cho ngày ${dayjs(date).format('DD/MM/YYYY')}`);
+      Alert.alert('Thành công', `Đã cập nhật suất ăn cho ngày ${dayjs(date).format('DD/MM/YYYY')}`);
+      setDailyModalVisible(false);
       fetchRegistrations(currentChild.id, selectedMonth, selectedYear);
     } catch (error: any) {
       Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xử lý yêu cầu.');
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleCancelAllMealsForDay = async (date: string) => {
+    if (!currentChild) return;
+
+    const targetDate = dayjs(date);
+    const today = dayjs();
+    
+    if (targetDate.isBefore(today, 'day') || targetDate.isSame(today, 'day')) {
+      Alert.alert('Lỗi', 'Đã hết hạn đăng ký suất ăn. Chỉ có thể báo cắt cơm cho ngày mai trở đi.');
+      return;
+    }
+
+    Alert.alert(
+      'Xác nhận cắt cơm',
+      `Bạn có chắc chắn muốn báo cắt toàn bộ suất ăn ngày ${dayjs(date).format('DD/MM/YYYY')} không?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { 
+          text: 'Đồng ý', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setProcessing(true);
+              await mealRegistrationService.processDailyRegistration({
+                childId: currentChild.id,
+                date: date,
+                isRegistered: false,
+                mealTypes: ['BREAKFAST', 'LUNCH', 'SNACK']
+              });
+              Alert.alert('Thành công', `Đã báo cắt cơm cho ngày ${dayjs(date).format('DD/MM/YYYY')}`);
+              fetchRegistrations(currentChild.id, selectedMonth, selectedYear);
+            } catch (error: any) {
+              Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xử lý yêu cầu.');
+            } finally {
+              setProcessing(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const toggleMealType = (type: keyof typeof mealTypes) => {
@@ -242,24 +295,26 @@ export default function ParentMealRegistrationScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Meal Types Configuration */}
-          <View style={styles.mealTypeConfig}>
-            <Text style={styles.sectionTitle}>Cấu hình Bữa ăn thao tác:</Text>
-            <View style={styles.switchRow}>
-              <View style={styles.switchItem}>
-                <Switch value={mealTypes.BREAKFAST} onValueChange={() => toggleMealType('BREAKFAST')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
-                <Text style={styles.switchLabel}>Sáng</Text>
-              </View>
-              <View style={styles.switchItem}>
-                <Switch value={mealTypes.LUNCH} onValueChange={() => toggleMealType('LUNCH')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
-                <Text style={styles.switchLabel}>Trưa</Text>
-              </View>
-              <View style={styles.switchItem}>
-                <Switch value={mealTypes.SNACK} onValueChange={() => toggleMealType('SNACK')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
-                <Text style={styles.switchLabel}>Xế</Text>
+          {/* Meal Types Configuration - Only visible in MONTHLY tab */}
+          {activeTab === 'MONTHLY' && (
+            <View style={styles.mealTypeConfig}>
+              <Text style={styles.sectionTitle}>Cấu hình Bữa ăn thao tác:</Text>
+              <View style={styles.switchRow}>
+                <View style={styles.switchItem}>
+                  <Switch value={mealTypes.BREAKFAST} onValueChange={() => toggleMealType('BREAKFAST')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
+                  <Text style={styles.switchLabel}>Sáng</Text>
+                </View>
+                <View style={styles.switchItem}>
+                  <Switch value={mealTypes.LUNCH} onValueChange={() => toggleMealType('LUNCH')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
+                  <Text style={styles.switchLabel}>Trưa</Text>
+                </View>
+                <View style={styles.switchItem}>
+                  <Switch value={mealTypes.SNACK} onValueChange={() => toggleMealType('SNACK')} trackColor={{ true: '#10b981', false: '#cbd5e1' }} />
+                  <Text style={styles.switchLabel}>Xế</Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           <ScrollView 
             style={{ flex: 1 }}
@@ -305,7 +360,7 @@ export default function ParentMealRegistrationScreen() {
                   <View style={{ marginLeft: 12, flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginBottom: 4 }}>Báo cắt cơm theo ngày</Text>
                     <Text style={{ fontSize: 14, color: '#475569', lineHeight: 20 }}>
-                      Bạn có thể báo cắt cơm cho bé từng ngày cụ thể (VD: Khi bé ốm). Vui lòng thao tác trước 8:00 AM của ngày hôm đó
+                      Bạn có thể báo cắt cơm cho bé từng ngày cụ thể (VD: Khi bé ốm). Chạm vào "Điều chỉnh" để chọn chi tiết bữa ăn. Vui lòng thao tác từ ngày hôm trước để nhà bếp chuẩn bị.
                     </Text>
                   </View>
                 </View>
@@ -315,12 +370,11 @@ export default function ParentMealRegistrationScreen() {
                     const today = dayjs().format('YYYY-MM-DD');
                     const isPast = dayjs(date).isBefore(dayjs(), 'day');
                     const isToday = date === today;
-                    const isLockedToday = isToday && dayjs().hour() >= 8;
-                    const isLocked = isPast || isLockedToday;
+                    const isLocked = isPast || isToday;
                     
                     const dayRegs = groupedRegistrations[date] || [];
                     const allMeals = ['BREAKFAST', 'LUNCH', 'SNACK'];
-                    const cancelledMeals = dayRegs.filter(r => r.status === 'CANCELLED').map(r => r.mealType);
+                    const cancelledMeals = dayRegs.filter(r => r.status === 'CANCELLED' || r.status === 'CANCELLED_BY_LEAVE').map(r => r.mealType);
                     const registeredMeals = allMeals.filter(m => !cancelledMeals.includes(m));
                     const isRegistered = registeredMeals.length > 0;
                     
@@ -355,15 +409,38 @@ export default function ParentMealRegistrationScreen() {
 
                         <View style={styles.dayAction}>
                           {!isLocked ? (
-                            <TouchableOpacity 
-                              style={[styles.actionBtn, isRegistered ? styles.btnCancel : styles.btnRegister]}
-                              onPress={() => handleDailySubmit(date, !isRegistered)}
-                              disabled={processing}
-                            >
-                              <Text style={[styles.btnRegisterText, isRegistered && styles.btnCancelText]}>
-                                {isRegistered ? 'Báo cắt cơm' : 'Đăng ký lại'}
-                              </Text>
-                            </TouchableOpacity>
+                            isRegistered ? (
+                              <View style={{ flexDirection: 'row', gap: 8 }}>
+                                <TouchableOpacity 
+                                  style={[styles.actionBtn, { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' }]}
+                                  onPress={() => openDailyModal(date, registeredMeals)}
+                                  disabled={processing}
+                                >
+                                  <Text style={[styles.btnRegisterText, { color: '#334155' }]}>
+                                    Điều chỉnh
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                  style={[styles.actionBtn, styles.btnCancel]}
+                                  onPress={() => handleCancelAllMealsForDay(date)}
+                                  disabled={processing}
+                                >
+                                  <Text style={[styles.btnCancelText]}>
+                                    Báo cắt cơm
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <TouchableOpacity 
+                                style={[styles.actionBtn, styles.btnRegister]}
+                                onPress={() => openDailyModal(date, registeredMeals)}
+                                disabled={processing}
+                              >
+                                <Text style={styles.btnRegisterText}>
+                                  Đăng ký
+                                </Text>
+                              </TouchableOpacity>
+                            )
                           ) : (
                             <Text style={styles.lockedText}>
                               <Ionicons name="lock-closed" size={12} /> Đã khóa
@@ -377,6 +454,63 @@ export default function ParentMealRegistrationScreen() {
               </View>
             )}
           </ScrollView>
+          
+          {/* Daily Config Modal */}
+          <Modal
+            visible={dailyModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setDailyModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Cấu hình suất ăn</Text>
+                  <TouchableOpacity onPress={() => setDailyModalVisible(false)}>
+                    <Ionicons name="close" size={24} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+                {selectedDailyDate && (
+                  <Text style={styles.modalSubtitle}>Ngày {dayjs(selectedDailyDate).format('DD/MM/YYYY')}</Text>
+                )}
+                
+                <View style={styles.modalConfig}>
+                  <View style={styles.modalSwitchItem}>
+                    <Text style={styles.modalSwitchLabel}>Sáng</Text>
+                    <Switch 
+                      value={dailyMealConfig.BREAKFAST} 
+                      onValueChange={() => setDailyMealConfig(prev => ({...prev, BREAKFAST: !prev.BREAKFAST}))} 
+                      trackColor={{ true: '#10b981', false: '#cbd5e1' }} 
+                    />
+                  </View>
+                  <View style={styles.modalSwitchItem}>
+                    <Text style={styles.modalSwitchLabel}>Trưa</Text>
+                    <Switch 
+                      value={dailyMealConfig.LUNCH} 
+                      onValueChange={() => setDailyMealConfig(prev => ({...prev, LUNCH: !prev.LUNCH}))} 
+                      trackColor={{ true: '#10b981', false: '#cbd5e1' }} 
+                    />
+                  </View>
+                  <View style={styles.modalSwitchItem}>
+                    <Text style={styles.modalSwitchLabel}>Xế</Text>
+                    <Switch 
+                      value={dailyMealConfig.SNACK} 
+                      onValueChange={() => setDailyMealConfig(prev => ({...prev, SNACK: !prev.SNACK}))} 
+                      trackColor={{ true: '#10b981', false: '#cbd5e1' }} 
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.btnPrimary, { marginTop: 24 }]}
+                  onPress={handleDailySubmit}
+                  disabled={processing}
+                >
+                  <Text style={styles.btnPrimaryText}>{processing ? 'Đang xử lý...' : 'Lưu thay đổi'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </>
       )}
     </SafeAreaView>
@@ -654,5 +788,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94a3b8',
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 20,
+  },
+  modalConfig: {
+    gap: 8,
+  },
+  modalSwitchItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  modalSwitchLabel: {
+    fontSize: 16,
+    color: '#334155',
+    fontWeight: '500',
   }
 });

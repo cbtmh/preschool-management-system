@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, 
@@ -17,7 +18,7 @@ export default function TeacherUpdateMenuScreen() {
   const route = useRoute<any>();
   
   const editingMenu = route.params?.menu;
-  const initialDate = route.params?.date || new Date().toISOString().split('T')[0];
+  const initialDate = route.params?.date || dayjs().format('YYYY-MM-DD');
 
   const [date, setDate] = useState(editingMenu?.date || initialDate);
   const [mealType, setMealType] = useState(editingMenu?.mealType || 'BREAKFAST');
