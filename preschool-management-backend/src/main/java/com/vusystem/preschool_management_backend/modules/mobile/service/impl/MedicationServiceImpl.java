@@ -10,6 +10,9 @@ import com.vusystem.preschool_management_backend.modules.mobile.dto.response.Med
 import com.vusystem.preschool_management_backend.modules.mobile.repository.AllergyRepository;
 import com.vusystem.preschool_management_backend.modules.mobile.repository.MedicationRequestRepository;
 import com.vusystem.preschool_management_backend.modules.mobile.service.MedicationService;
+import com.vusystem.preschool_management_backend.modules.mobile.repository.DailyLogRepository;
+import com.vusystem.preschool_management_backend.common.entity.operation.DailyLog;
+import com.vusystem.preschool_management_backend.common.entity.enums.AttendanceStatus;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
 import com.vusystem.preschool_management_backend.modules.communication.services.NotificationService;
 import com.vusystem.preschool_management_backend.modules.core.repository.EnrollmentRepository;
@@ -23,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +39,7 @@ public class MedicationServiceImpl implements MedicationService {
     private final SecurityService securityService;
     private final NotificationService notificationService;
     private final EnrollmentRepository enrollmentRepository;
+    private final DailyLogRepository dailyLogRepository;
 
     @Override
     @Transactional
@@ -49,7 +54,7 @@ public class MedicationServiceImpl implements MedicationService {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu");
         }
 
-        // không thể dặn thuốc sau 9h nhé (đối với ngày hiện tại)
+        // không thể dặn thuốc sau 9h  (đối với ngày hiện tại)
         if (request.getStartDate().isEqual(LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")))) {
             if (java.time.LocalTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).isAfter(java.time.LocalTime.of(9, 0))) {
                 throw new RuntimeException("Không thể dặn thuốc cho ngày hôm nay sau 9h sáng");
@@ -135,12 +140,25 @@ public class MedicationServiceImpl implements MedicationService {
 
         securityService.verifyTeacherTeachesChild(request.getChild().getId());
 
+        // Kiểm tra xem bé có đi học hôm nay không
+        Optional<DailyLog> logOpt = dailyLogRepository.findByChildIdAndDate(request.getChild().getId(), date);
+        if (logOpt.isEmpty() || logOpt.get().getAttendanceStatus() != AttendanceStatus.PRESENT) {
+            throw new RuntimeException("Học sinh chưa điểm danh có mặt hoặc đang vắng mặt. Không thể xác nhận cho uống thuốc.");
+        }
+
         if (request.getConfirmedDates() != null && request.getConfirmedDates().contains(date)) {
             throw new RuntimeException("Đã xác nhận uống thuốc cho ngày này rồi");
         }
 
         request.getConfirmedDates().add(date);
-        request.setStatus(RequestStatus.COMPLETED); 
+        
+        long totalDays = java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
+        if (request.getConfirmedDates().size() >= totalDays || date.isEqual(request.getEndDate()) || date.isAfter(request.getEndDate())) {
+            request.setStatus(RequestStatus.COMPLETED);
+        } else {
+            request.setStatus(RequestStatus.IN_PROGRESS);
+        }
+        
         medicationRepository.save(request);
 
         try {
@@ -148,9 +166,13 @@ public class MedicationServiceImpl implements MedicationService {
             
             Long recipientId = request.getChild().getParent().getUser().getId();
             
+            long totalDaysCount = java.time.temporal.ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
+            int confirmedCount = request.getConfirmedDates().size();
+            String progressMsg = confirmedCount + "/" + totalDaysCount;
+
             notificationService.sendNotificationToUserWithRef(
-                    "Đã hoàn thành đơn dặn thuốc",
-                    "Giáo viên đã cho bé " + request.getChild().getFullName() + " uống thuốc (" + request.getMedicationName() + ").",
+                    "Cập nhật đơn dặn thuốc",
+                    "Giáo viên đã cho bé " + request.getChild().getFullName() + " uống thuốc (" + request.getMedicationName() + "). Tiến độ: " + progressMsg + " ngày.",
                     NotificationType.INDIVIDUAL,
                     currentUserId,
                     recipientId,
@@ -173,6 +195,7 @@ public class MedicationServiceImpl implements MedicationService {
                 .endDate(entity.getEndDate())
                 .notes(entity.getNote())
                 .status(entity.getStatus())
+                .confirmedDates(entity.getConfirmedDates())
                 .build();
     }
 }

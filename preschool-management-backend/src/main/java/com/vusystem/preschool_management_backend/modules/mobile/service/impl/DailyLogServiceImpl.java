@@ -12,6 +12,8 @@ import com.vusystem.preschool_management_backend.modules.mobile.dto.request.Dail
 import com.vusystem.preschool_management_backend.modules.mobile.dto.response.DailyLogResponse;
 import com.vusystem.preschool_management_backend.modules.mobile.repository.DailyLogRepository;
 import com.vusystem.preschool_management_backend.modules.mobile.service.DailyLogService;
+import com.vusystem.preschool_management_backend.modules.mobile.repository.LeaveRequestRepository;
+import com.vusystem.preschool_management_backend.common.entity.operation.LeaveRequest;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
 import com.vusystem.preschool_management_backend.modules.communication.services.NotificationService;
 import com.vusystem.preschool_management_backend.common.entity.enums.NotificationType;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +39,7 @@ public class DailyLogServiceImpl implements DailyLogService {
     private final ChildRepository childRepository;
     private final SecurityService securityService;
     private final NotificationService notificationService;
+    private final LeaveRequestRepository leaveRequestRepository;
 
     @Override
     public List<DailyLogResponse> getDailyLogsForClass(Long classId, LocalDate date) {
@@ -52,6 +56,10 @@ public class DailyLogServiceImpl implements DailyLogService {
         Map<Long, DailyLog> logMap = existingLogs.stream()
                 .collect(Collectors.toMap(log -> log.getChild().getId(), log -> log));
 
+        // truy vấn thêm đơn xin nghỉ đã duyệt trong ngày hôm nay của lớp
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeaveRequestsForClassInDateRange(classId, date, date);
+        Set<Long> excusedChildIds = approvedLeaves.stream().map(lr -> lr.getChild().getId()).collect(Collectors.toSet());
+
         // sinh dữ liệu ảo (dto) cho các bé chưa điểm danh để frontend hiển thị list đầy đủ
         return enrollments.stream().map(enrollment -> {
             Long childId = enrollment.getChild().getId();
@@ -65,7 +73,7 @@ public class DailyLogServiceImpl implements DailyLogService {
                         .childId(childId)
                         .childFullName(enrollment.getChild().getFullName())
                         .date(date)
-                        .attendanceStatus(AttendanceStatus.ABSENT_UNEXCUSED)
+                        .attendanceStatus(excusedChildIds.contains(childId) ? AttendanceStatus.ABSENT_EXCUSED : AttendanceStatus.ABSENT_UNEXCUSED)
                         .hasSevereAllergy(hasSevereAllergy(enrollment.getChild()))
                         .build();
             }
@@ -144,11 +152,26 @@ public class DailyLogServiceImpl implements DailyLogService {
             }
 
             dailyLog.setAttendanceStatus(item.getAttendanceStatus());
-            dailyLog.setCheckInTime(item.getCheckInTime());
-            dailyLog.setCheckOutTime(item.getCheckOutTime());
-            dailyLog.setMealStatus(item.getMealStatus());
-            dailyLog.setSleepStatus(item.getSleepStatus());
-            dailyLog.setTeacherNotes(item.getTeacherNotes());
+            
+            // Xóa dữ liệu các trường khác nếu bé vắng mặt
+            if (item.getAttendanceStatus() != AttendanceStatus.PRESENT) {
+                dailyLog.setCheckInTime(null);
+                dailyLog.setCheckOutTime(null);
+                dailyLog.setMealStatus(null);
+                dailyLog.setSleepStatus(null);
+                dailyLog.setTeacherNotes(item.getTeacherNotes()); // Vẫn có thể giữ lại ghi chú nếu cần
+            } else {
+                if (item.getCheckInTime() != null && item.getCheckOutTime() != null) {
+                    if (item.getCheckOutTime().isBefore(item.getCheckInTime())) {
+                        throw new RuntimeException("Giờ ra về không thể diễn ra trước giờ vào lớp.");
+                    }
+                }
+                dailyLog.setCheckInTime(item.getCheckInTime());
+                dailyLog.setCheckOutTime(item.getCheckOutTime());
+                dailyLog.setMealStatus(item.getMealStatus());
+                dailyLog.setSleepStatus(item.getSleepStatus());
+                dailyLog.setTeacherNotes(item.getTeacherNotes());
+            }
 
             logsToSave.add(dailyLog);
 

@@ -17,6 +17,8 @@ import com.vusystem.preschool_management_backend.modules.core.repository.Enrollm
 import com.vusystem.preschool_management_backend.modules.core.repository.MealRegistrationRepository;
 import com.vusystem.preschool_management_backend.modules.core.services.MealRegistrationService;
 import com.vusystem.preschool_management_backend.modules.core.repository.SchoolClassRepository;
+import com.vusystem.preschool_management_backend.modules.communication.services.NotificationService;
+import com.vusystem.preschool_management_backend.common.entity.enums.NotificationType;
 import com.vusystem.preschool_management_backend.config.security.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +46,9 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
     private final EnrollmentRepository enrollmentRepository;
     private final SchoolClassRepository schoolClassRepository;
     private final SecurityService securityService;
+    private final NotificationService notificationService;
 
-    private static final LocalTime CUTOFF_TIME = LocalTime.of(8, 0); // cấu hình thời gian khóa hệ thống đăng ký suất ăn để nhà bếp chốt số lượng thực phẩm (08:00 sáng)
+
 
 
     @Override
@@ -56,9 +59,42 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 .map(c -> c.getName())
                 .orElse("Chưa xếp lớp");
 
-        return mealRegistrationRepository.findMealRegistrationsByClassAndDate(classId, date).stream()
-                .map(entity -> mapToResponse(entity, className))
-                .collect(Collectors.toList());
+        List<MealRegistrationResponse> responses = new ArrayList<>();
+        
+        if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return responses;
+        }
+
+        List<MealRegistration> explicitRegistrations = mealRegistrationRepository.findMealRegistrationsByClassAndDate(classId, date);
+        List<Enrollment> activeEnrollments = enrollmentRepository.findBySchoolClassIdAndStatus(classId, EnrollmentStatus.STUDYING);
+
+        MealType[] defaultMeals = MealType.values(); // BREAKFAST, LUNCH, SNACK
+
+        for (Enrollment enrollment : activeEnrollments) {
+            Child child = enrollment.getChild();
+            for (MealType mealType : defaultMeals) {
+                MealRegistration explicitReg = explicitRegistrations.stream()
+                        .filter(reg -> reg.getChild().getId().equals(child.getId()) && reg.getMealType() == mealType)
+                        .findFirst()
+                        .orElse(null);
+
+                if (explicitReg != null) {
+                    responses.add(mapToResponse(explicitReg, className));
+                } else {
+                    responses.add(MealRegistrationResponse.builder()
+                            .id(null)
+                            .childId(child.getId())
+                            .childFullName(child.getFullName())
+                            .className(className)
+                            .date(date)
+                            .mealType(mealType)
+                            .status(MealRegStatus.REGISTERED)
+                            .build());
+                }
+            }
+        }
+
+        return responses;
     }
 
     @Override
@@ -99,8 +135,11 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         List<MealRegistration> recordsToSave = new ArrayList<>();
 
         List<MealType> requestMealTypes = request.getMealTypes();
-        if (requestMealTypes == null || requestMealTypes.isEmpty()) {
-            throw new RuntimeException("Danh sách bữa ăn không được để trống.");
+        if (requestMealTypes == null) {
+            requestMealTypes = new ArrayList<>();
+        }
+        if (requestMealTypes.isEmpty() && request.getIsRegistered()) {
+            throw new RuntimeException("Danh sách bữa ăn không được để trống khi đăng ký.");
         }
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
@@ -109,11 +148,21 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 continue;
             }
             
-            if (date.isBefore(today) || (date.isEqual(today) && LocalTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).isAfter(CUTOFF_TIME))) {
+            if (!date.isAfter(today)) {
                 continue; 
             }
 
-            for (MealType mealType : requestMealTypes) {
+            for (MealType mealType : MealType.values()) {
+                boolean isSelected = requestMealTypes.contains(mealType);
+                MealRegStatus statusToSet;
+                
+                if (request.getIsRegistered()) {
+                    statusToSet = isSelected ? MealRegStatus.REGISTERED : MealRegStatus.CANCELLED;
+                } else {
+                    if (!isSelected) continue;
+                    statusToSet = MealRegStatus.CANCELLED;
+                }
+
                 final LocalDate checkDate = date;
                 MealRegistration existing = existingRegistrations.stream()
                         .filter(r -> r.getDate().isEqual(checkDate) && r.getMealType() == mealType)
@@ -121,8 +170,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                         .orElse(null);
 
                 if (existing != null) {
-                    if (existing.getStatus() != newStatus) {
-                        existing.setStatus(newStatus);
+                    if (existing.getStatus() != statusToSet) {
+                        existing.setStatus(statusToSet);
                         recordsToSave.add(existing);
                     }
                 } else {
@@ -130,7 +179,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                             .child(child)
                             .date(date)
                             .mealType(mealType)
-                            .status(newStatus)
+                            .status(statusToSet)
                             .build();
                     recordsToSave.add(newReg);
                 }
@@ -159,8 +208,11 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         }
 
         List<MealType> requestMealTypes = request.getMealTypes();
-        if (requestMealTypes == null || requestMealTypes.isEmpty()) {
-            throw new RuntimeException("Danh sách bữa ăn không được để trống.");
+        if (requestMealTypes == null) {
+            requestMealTypes = new ArrayList<>();
+        }
+        if (requestMealTypes.isEmpty() && request.getIsRegistered()) {
+            throw new RuntimeException("Danh sách bữa ăn không được để trống khi đăng ký.");
         }
 
         List<MealRegistration> existingRegistrations = mealRegistrationRepository
@@ -169,15 +221,25 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         MealRegStatus newStatus = request.getIsRegistered() ? MealRegStatus.REGISTERED : MealRegStatus.CANCELLED;
         List<MealRegistration> recordsToSave = new ArrayList<>();
 
-        for (MealType mealType : requestMealTypes) {
+        for (MealType mealType : MealType.values()) {
+            boolean isSelected = requestMealTypes.contains(mealType);
+            MealRegStatus statusToSet;
+            
+            if (request.getIsRegistered()) {
+                statusToSet = isSelected ? MealRegStatus.REGISTERED : MealRegStatus.CANCELLED;
+            } else {
+                if (!isSelected) continue;
+                statusToSet = MealRegStatus.CANCELLED;
+            }
+
             MealRegistration existing = existingRegistrations.stream()
                     .filter(r -> r.getMealType() == mealType)
                     .findFirst()
                     .orElse(null);
 
             if (existing != null) {
-                if (existing.getStatus() != newStatus) {
-                    existing.setStatus(newStatus);
+                if (existing.getStatus() != statusToSet) {
+                    existing.setStatus(statusToSet);
                     recordsToSave.add(existing);
                 }
             } else {
@@ -185,7 +247,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                         .child(child)
                         .date(applyDate)
                         .mealType(mealType)
-                        .status(newStatus)
+                        .status(statusToSet)
                         .build();
                 recordsToSave.add(newReg);
             }
@@ -196,18 +258,102 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
         }
     }
 
+    @Override
+    @Transactional
+    public void overrideDailyRegistration(DailyMealRegistrationRequest request) {
+        // Giáo viên hoặc Admin được phép thực hiện
+        securityService.verifyTeacherTeachesChild(request.getChildId());
+        
+        Child child = childRepository.findById(request.getChildId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + request.getChildId()));
+
+        LocalDate applyDate = request.getDate();
+
+        // CỐ TÌNH BỎ QUA validateTimeRule(applyDate) để giáo viên có thể ghi đè cho ngày hôm nay
+        // Nhưng vẫn chặn đăng ký suất ăn cho cuối tuần
+        if (applyDate.getDayOfWeek() == DayOfWeek.SATURDAY || applyDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            throw new RuntimeException("Không thể đăng ký suất ăn cho ngày nghỉ cuối tuần.");
+        }
+
+        List<MealType> requestMealTypes = request.getMealTypes();
+        if (requestMealTypes == null) {
+            requestMealTypes = new ArrayList<>();
+        }
+        if (requestMealTypes.isEmpty() && request.getIsRegistered()) {
+            throw new RuntimeException("Danh sách bữa ăn không được để trống khi đăng ký.");
+        }
+
+        List<MealRegistration> existingRegistrations = mealRegistrationRepository
+                .findByChildIdAndDateBetweenOrderByDateAsc(request.getChildId(), applyDate, applyDate);
+
+        MealRegStatus newStatus = request.getIsRegistered() ? MealRegStatus.REGISTERED : MealRegStatus.CANCELLED;
+        List<MealRegistration> recordsToSave = new ArrayList<>();
+
+        for (MealType mealType : MealType.values()) {
+            boolean isSelected = requestMealTypes.contains(mealType);
+            MealRegStatus statusToSet;
+            
+            if (request.getIsRegistered()) {
+                statusToSet = isSelected ? MealRegStatus.REGISTERED : MealRegStatus.CANCELLED;
+            } else {
+                if (!isSelected) continue;
+                statusToSet = MealRegStatus.CANCELLED;
+            }
+
+            MealRegistration existing = existingRegistrations.stream()
+                    .filter(r -> r.getMealType() == mealType)
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                if (existing.getStatus() != statusToSet) {
+                    existing.setStatus(statusToSet);
+                    recordsToSave.add(existing);
+                }
+            } else {
+                MealRegistration newReg = MealRegistration.builder()
+                        .child(child)
+                        .date(applyDate)
+                        .mealType(mealType)
+                        .status(statusToSet)
+                        .build();
+                recordsToSave.add(newReg);
+            }
+        }
+
+        if (!recordsToSave.isEmpty()) {
+            mealRegistrationRepository.saveAll(recordsToSave);
+            
+            // Gửi thông báo cho phụ huynh
+            if (child.getParent() != null && child.getParent().getUser() != null) {
+                Long parentUserId = child.getParent().getUser().getId();
+                Long teacherId = securityService.getCurrentUser().getId();
+                
+                String statusStr = request.getIsRegistered() ? "đăng ký bổ sung" : "hủy bổ sung";
+                String mealsStr = requestMealTypes.stream()
+                        .map(m -> m == MealType.BREAKFAST ? "Sáng" : (m == MealType.LUNCH ? "Trưa" : "Xế"))
+                        .collect(Collectors.joining(", "));
+                
+                String title = "\uD83C\uDF7D\uFE0F " + (request.getIsRegistered() ? "Bổ sung suất ăn" : "Hủy suất ăn ngoại lệ");
+                String content = "Giáo viên đã " + statusStr + " suất ăn (" + mealsStr + ") cho bé " + child.getFullName() + " trong ngày hôm nay. Chúc bé một ngày vui vẻ!";
+                
+                try {
+                    // Tránh lỗi transaction bị đánh dấu rollback-only nếu notification bị lỗi
+                    notificationService.sendNotificationToUserWithRef(
+                            title, content, NotificationType.INTERACTION, teacherId, parentUserId, "MEAL_REGISTRATION", null);
+                } catch (Exception e) {
+                    log.error("Lỗi khi gửi thông báo suất ăn ngoại lệ cho phụ huynh ID: {}", parentUserId, e);
+                }
+            }
+        }
+    }
+
     
     private void validateTimeRule(LocalDate applyDate) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         
-        if (applyDate.isBefore(today)) {
-            throw new RuntimeException("Không thể đăng ký hoặc báo cắt cơm cho ngày trong quá khứ.");
-        }
-
-        if (applyDate.isEqual(today)) {
-            if (LocalTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).isAfter(CUTOFF_TIME)) {
-                throw new RuntimeException("Đã quá 8h00 sáng, không thể thay đổi thông tin suất ăn của ngày hôm nay.");
-            }
+        if (!applyDate.isAfter(today)) {
+            throw new RuntimeException("Đã hết hạn đăng ký suất ăn. Chỉ có thể đăng ký hoặc báo cắt cơm cho ngày mai trở đi.");
         }
     }
 
@@ -331,7 +477,7 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
             if (status == MealRegStatus.REGISTERED) {
                 studentStats.setTotalRegistered(studentStats.getTotalRegistered() + count);
-            } else if (status == MealRegStatus.CANCELLED) {
+            } else if (status == MealRegStatus.CANCELLED || status == MealRegStatus.CANCELLED_BY_LEAVE) {
                 studentStats.setTotalCancelled(studentStats.getTotalCancelled() + count);
             }
         }
@@ -357,6 +503,12 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 continue;
             }
 
+            // Bỏ qua việc hủy suất ăn nếu ngày đó đã qua hoặc là ngày hôm nay (giả định bếp đã nấu xong cho hôm nay)
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+            if (!date.isAfter(today)) {
+                continue;
+            }
+
             for (MealType mealType : allMealTypes) {
                 final LocalDate checkDate = date;
                 MealRegistration existing = existingRegistrations.stream()
@@ -365,8 +517,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                         .orElse(null);
 
                 if (existing != null) {
-                    if (existing.getStatus() != MealRegStatus.CANCELLED) {
-                        existing.setStatus(MealRegStatus.CANCELLED);
+                    if (existing.getStatus() == MealRegStatus.REGISTERED) {
+                        existing.setStatus(MealRegStatus.CANCELLED_BY_LEAVE);
                         recordsToSave.add(existing);
                     }
                 } else {
@@ -374,9 +526,52 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                             .child(child)
                             .date(date)
                             .mealType(mealType)
-                            .status(MealRegStatus.CANCELLED)
+                            .status(MealRegStatus.CANCELLED_BY_LEAVE)
                             .build();
                     recordsToSave.add(newReg);
+                }
+            }
+        }
+
+        if (!recordsToSave.isEmpty()) {
+            mealRegistrationRepository.saveAll(recordsToSave);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void restoreMealsForLeaveCancel(Long childId, LocalDate startDate, LocalDate endDate) {
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + childId));
+
+        List<MealRegistration> existingRegistrations = mealRegistrationRepository
+                .findByChildIdAndDateBetweenOrderByDateAsc(childId, startDate, endDate);
+
+        List<MealRegistration> recordsToSave = new ArrayList<>();
+        MealType[] allMealTypes = MealType.values(); 
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                continue;
+            }
+
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+            if (!date.isAfter(today)) {
+                continue; // Chỉ khôi phục cho các ngày tương lai
+            }
+
+            for (MealType mealType : allMealTypes) {
+                final LocalDate checkDate = date;
+                MealRegistration existing = existingRegistrations.stream()
+                        .filter(r -> r.getDate().isEqual(checkDate) && r.getMealType() == mealType)
+                        .findFirst()
+                        .orElse(null);
+
+                if (existing != null) {
+                    if (existing.getStatus() == MealRegStatus.CANCELLED_BY_LEAVE) {
+                        existing.setStatus(MealRegStatus.REGISTERED);
+                        recordsToSave.add(existing);
+                    }
                 }
             }
         }

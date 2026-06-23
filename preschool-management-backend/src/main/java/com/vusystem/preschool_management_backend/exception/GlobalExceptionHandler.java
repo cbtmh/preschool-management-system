@@ -53,6 +53,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        String firstErrorMessage = "Dữ liệu đầu vào không hợp lệ";
+        
+        if (ex.getBindingResult().hasErrors()) {
+            firstErrorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        }
+
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
@@ -61,7 +67,7 @@ public class GlobalExceptionHandler {
 
         ApiResponse<Object> response = ApiResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value()) // 400
-                .message("Dữ liệu đầu vào không hợp lệ")
+                .message(firstErrorMessage)
                 .data(errors)
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);

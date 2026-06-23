@@ -40,6 +40,17 @@ public class LeaveRequestController {
                 .build();
     }
 
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('PARENT')")
+    public ApiResponse<?> cancelRequest(@PathVariable Long id) {
+        leaveRequestService.cancelRequest(id);
+        return ApiResponse.builder()
+                .status(200)
+                .message("Hủy đơn xin nghỉ thành công")
+                .data(null)
+                .build();
+    }
+
     // --- TEACHER / ADMIN APIs ---
 
     @GetMapping("/classes/{classId}")

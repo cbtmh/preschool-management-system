@@ -26,4 +26,6 @@ public class MedicationResponse {
     
     // ĐIỂM ĂN TIỀN: Trả luôn danh sách dị ứng của bé này để FE bật Alert đỏ
     private List<String> allergies;
+    
+    private java.util.Set<LocalDate> confirmedDates;
 }

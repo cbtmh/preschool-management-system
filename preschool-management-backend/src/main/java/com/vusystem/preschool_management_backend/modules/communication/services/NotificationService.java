@@ -31,7 +31,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.vusystem.preschool_management_backend.common.entity.user.User;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -47,8 +49,11 @@ public class NotificationService {
 
     @Transactional
     public void sendNotification(SendNotificationRequest request, Long senderId) {
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
+        User sender = userRepository.findById(senderId).orElse(null);
+        if (sender == null) {
+            log.error("Sender not found for ID: {}", senderId);
+            return;
+        }
 
         Notification notification = Notification.builder()
                 .title(request.getTitle())
@@ -137,11 +142,17 @@ public class NotificationService {
 
     @Transactional
     public void sendNotificationToUserWithRef(String title, String content, NotificationType type, Long senderId, Long recipientId, String referenceType, Long referenceId) {
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
+        User sender = userRepository.findById(senderId).orElse(null);
+        if (sender == null) {
+            log.error("Sender not found for ID: {}", senderId);
+            return;
+        }
         
-        User recipient = userRepository.findById(recipientId)
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
+        User recipient = userRepository.findById(recipientId).orElse(null);
+        if (recipient == null) {
+            log.error("Recipient not found for ID: {}", recipientId);
+            return;
+        }
 
         Notification notification = Notification.builder()
                 .title(title)

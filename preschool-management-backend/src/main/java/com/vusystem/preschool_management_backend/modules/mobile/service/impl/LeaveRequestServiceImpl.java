@@ -63,6 +63,12 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             throw new RuntimeException("Ngày kết thúc không được nhỏ hơn ngày bắt đầu.");
         }
 
+        boolean hasOverlap = leaveRequestRepository.existsOverlappingRequest(
+                child.getId(), request.getStartDate(), request.getEndDate());
+        if (hasOverlap) {
+            throw new RuntimeException("Đã tồn tại đơn xin nghỉ trong khoảng thời gian này. Bạn không thể tạo đơn mới trừ khi đơn cũ bị hủy.");
+        }
+
         LeaveRequest entity = LeaveRequest.builder()
                 .child(child)
                 .startDate(request.getStartDate())
@@ -154,6 +160,63 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             );
         } catch (Exception e) {
             System.err.println("Lỗi khi gửi thông báo cập nhật đơn xin nghỉ: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void cancelRequest(Long id) {
+        LeaveRequest request = leaveRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn xin nghỉ với ID: " + id));
+        
+        securityService.verifyParentOwnsChild(request.getChild().getId());
+        
+        if (request.getStatus() == RequestStatus.CANCELLED) {
+            throw new RuntimeException("Đơn xin nghỉ này đã bị hủy.");
+        }
+        
+        if (request.getStatus() == RequestStatus.REJECTED) {
+            throw new RuntimeException("Không thể hủy đơn đã bị từ chối.");
+        }
+
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+
+        if (request.getStatus() == RequestStatus.PENDING) {
+            request.setStatus(RequestStatus.CANCELLED);
+            leaveRequestRepository.save(request);
+        } else if (request.getStatus() == RequestStatus.APPROVED) {
+            if (!today.isBefore(request.getStartDate())) {
+                throw new RuntimeException("Đã đến thời gian nghỉ, bạn không thể tự hủy đơn trên ứng dụng. Vui lòng liên hệ trực tiếp với giáo viên tại lớp.");
+            }
+            
+            request.setStatus(RequestStatus.CANCELLED);
+            leaveRequestRepository.save(request);
+            
+            mealRegistrationService.restoreMealsForLeaveCancel(
+                    request.getChild().getId(),
+                    request.getStartDate(),
+                    request.getEndDate()
+            );
+
+            try {
+                Long currentUserId = securityService.getCurrentUser().getId();
+                Enrollment enrollment = enrollmentRepository.findByChildIdAndStatus(request.getChild().getId(), EnrollmentStatus.STUDYING).orElse(null);
+                
+                if (enrollment != null && enrollment.getSchoolClass() != null) {
+                    SendNotificationRequest notifRequest = SendNotificationRequest.builder()
+                            .title("Phụ huynh đã hủy đơn xin nghỉ")
+                            .content("Phụ huynh bé " + request.getChild().getFullName() + " vừa hủy đơn xin nghỉ từ ngày " + request.getStartDate() + " đến ngày " + request.getEndDate() + ". Hệ thống đã tự động khôi phục suất ăn cho bé.")
+                            .type(NotificationType.CLASS)
+                            .targetClassIds(List.of(enrollment.getSchoolClass().getId()))
+                            .targetRoles(List.of("TEACHER"))
+                            .referenceType("LEAVE_REQUEST")
+                            .referenceId(request.getId())
+                            .build();
+                    notificationService.sendNotification(notifRequest, currentUserId);
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi khi gửi thông báo hủy đơn xin nghỉ: " + e.getMessage());
+            }
         }
     }
 

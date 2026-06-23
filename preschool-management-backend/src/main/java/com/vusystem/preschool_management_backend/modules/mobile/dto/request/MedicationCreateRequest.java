@@ -27,11 +27,11 @@ public class MedicationCreateRequest {
     private String dosage;
 
     @NotNull(message = "Ngày bắt đầu không được để trống")
-    @FutureOrPresent(message = "Ngày bắt đầu phải từ hôm nay trở đi")
+    @FutureOrPresent(message = "Không thể tạo đơn dặn thuốc trong quá khứ")
     private LocalDate startDate;
 
     @NotNull(message = "Ngày kết thúc không được để trống")
-    @FutureOrPresent(message = "Ngày kết thúc phải từ hôm nay trở đi")
+    @FutureOrPresent(message = "Không thể tạo đơn dặn thuốc trong quá khứ")
     private LocalDate endDate;
 
     // Lời dặn dò thêm của phụ huynh (uống sau ăn, uống nước ấm...)

@@ -25,4 +25,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
            "WHERE lr.child.id IN (SELECT e.child.id FROM com.vusystem.preschool_management_backend.common.entity.academic.Enrollment e WHERE e.schoolClass.id = :classId) " +
            "ORDER BY lr.createdAt DESC")
     List<LeaveRequest> findLeaveRequestsByClassIdOrderByCreatedAtDesc(@org.springframework.data.repository.query.Param("classId") Long classId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(lr) > 0 FROM LeaveRequest lr " +
+           "WHERE lr.child.id = :childId " +
+           "AND lr.status IN ('PENDING', 'APPROVED') " +
+           "AND lr.startDate <= :endDate AND lr.endDate >= :startDate")
+    boolean existsOverlappingRequest(
+            @org.springframework.data.repository.query.Param("childId") Long childId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 }

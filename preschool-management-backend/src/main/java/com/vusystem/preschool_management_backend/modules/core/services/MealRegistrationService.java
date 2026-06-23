@@ -17,6 +17,9 @@ public interface MealRegistrationService {
 
     void processDailyRegistration(com.vusystem.preschool_management_backend.modules.core.dto.request.DailyMealRegistrationRequest request);
 
+    // cho phép giáo viên/admin đăng ký ngoại lệ vượt qua ràng buộc thời gian
+    void overrideDailyRegistration(com.vusystem.preschool_management_backend.modules.core.dto.request.DailyMealRegistrationRequest request);
+
     List<MealRegistrationResponse> getRegistrationsByClassAndDate(Long classId, LocalDate date);
 
     List<MealRegistrationResponse> getRegistrationsByChildAndDateRange(Long childId, LocalDate startDate, LocalDate endDate);
@@ -27,4 +30,7 @@ public interface MealRegistrationService {
 
     // tự động đồng bộ hóa việc cắt cơm khi học sinh có đơn xin nghỉ được duyệt
     void cancelMealsForLeave(Long childId, LocalDate startDate, LocalDate endDate);
+
+    // tự động khôi phục suất ăn khi phụ huynh hủy đơn xin nghỉ đã duyệt
+    void restoreMealsForLeaveCancel(Long childId, LocalDate startDate, LocalDate endDate);
 }

@@ -62,6 +62,24 @@ public class MealRegistrationController {
     }
 
     /**
+     * API: Đăng ký ngoại lệ suất ăn theo từng ngày (Bỏ qua giới hạn thời gian)
+     * Dành riêng cho Giáo viên hoặc Admin để hỗ trợ phụ huynh quên đăng ký.
+     */
+    @PostMapping("/override/daily")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ApiResponse<?> overrideDailyRegistration(
+            @Valid @RequestBody DailyMealRegistrationRequest request) {
+        
+        mealRegistrationService.overrideDailyRegistration(request);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Đăng ký/Hủy suất ăn ngoại lệ thành công")
+                .data(null)
+                .build();
+    }
+
+    /**
      * API 2: Lấy danh sách đăng ký suất ăn của một Lớp học theo Ngày cụ thể
      * Phục vụ cho Giáo viên theo dõi lớp học và Nhà bếp tổng hợp số lượng nấu ăn.
      */
