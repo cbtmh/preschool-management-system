@@ -34,4 +34,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             @org.springframework.data.repository.query.Param("childId") Long childId,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(lr) > 0 FROM LeaveRequest lr " +
+           "WHERE lr.child.id = :childId " +
+           "AND lr.status = 'APPROVED' " +
+           "AND lr.startDate <= :endDate AND lr.endDate >= :startDate")
+    boolean existsApprovedRequest(
+            @org.springframework.data.repository.query.Param("childId") Long childId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 }

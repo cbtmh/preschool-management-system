@@ -28,4 +28,8 @@ public class MealRegistrationResponse {
     private MealType mealType;
     
     private MealRegStatus status;
+
+    private Boolean isTeacherOverride;
+    
+    private MealRegStatus originalStatus;
 }

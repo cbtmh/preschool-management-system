@@ -80,6 +80,23 @@ public class MealRegistrationController {
     }
 
     /**
+     * API: Khôi phục suất ăn đã bị ghi đè (ngoại lệ) về trạng thái gốc.
+     */
+    @PostMapping("/restore-override/daily")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    public ApiResponse<?> restoreDailyRegistration(
+            @Valid @RequestBody DailyMealRegistrationRequest request) {
+        
+        mealRegistrationService.restoreDailyRegistration(request);
+        
+        return ApiResponse.builder()
+                .status(200)
+                .message("Khôi phục suất ăn thành công")
+                .data(null)
+                .build();
+    }
+
+    /**
      * API 2: Lấy danh sách đăng ký suất ăn của một Lớp học theo Ngày cụ thể
      * Phục vụ cho Giáo viên theo dõi lớp học và Nhà bếp tổng hợp số lượng nấu ăn.
      */

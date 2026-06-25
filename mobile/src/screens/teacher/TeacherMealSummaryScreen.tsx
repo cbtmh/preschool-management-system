@@ -11,6 +11,8 @@ import { mealRegistrationService } from '../../services/mealRegistration.service
 import { teacherService } from '../../services/teacher.service';
 import { SchoolClassResponse } from '../../types/teacher';
 import { Calendar } from 'react-native-calendars';
+import { leaveRequestService } from '../../services/leaveRequest.service';
+import { dailyLogService } from '../../services/dailyLog.service';
 
 export default function TeacherMealSummaryScreen() {
   const navigation = useNavigation<any>();
@@ -25,8 +27,15 @@ export default function TeacherMealSummaryScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  const [cancelledList, setCancelledList] = useState<{childId: number, childName: string, meals: string[], reason: string}[]>([]);
+  const [overriddenList, setOverriddenList] = useState<{childId: number, childName: string, meals: string[], originalStatus: string}[]>([]);
+  const [pendingCancelList, setPendingCancelList] = useState<{childId: number, childName: string, registeredMeals: string[]}[]>([]);
+  const [leaveChildIds, setLeaveChildIds] = useState<Set<number>>(new Set());
+  const [attendanceMap, setAttendanceMap] = useState<Record<number, string>>({});
+
   // Override Modal state
   const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideMode, setOverrideMode] = useState<'ADD' | 'CANCEL'>('ADD');
   const [overrideChild, setOverrideChild] = useState<{id: number, name: string} | null>(null);
   const [overrideMeals, setOverrideMeals] = useState<string[]>([]);
 
@@ -36,7 +45,6 @@ export default function TeacherMealSummaryScreen() {
     totalSnack: 0,
     totalMeals: 0
   });
-  const [cancelledList, setCancelledList] = useState<{childId: number, childName: string, meals: string[]}[]>([]);
 
   useEffect(() => {
     generateWeekDates(new Date());
@@ -85,25 +93,103 @@ export default function TeacherMealSummaryScreen() {
     try {
       setLoading(true);
       const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
-      const registrations = await mealRegistrationService.getRegistrationsByClassAndDate(selectedClass.id, dateStr);
       
+      const [registrations, leaveRequests, dailyLogs] = await Promise.all([
+        mealRegistrationService.getRegistrationsByClassAndDate(selectedClass.id, dateStr),
+        leaveRequestService.getClassRequests(selectedClass.id).catch(() => []),
+        dailyLogService.getDailyLogsForClass(selectedClass.id, dateStr).catch(() => [])
+      ]);
+      
+      const approvedLeavesThisDate = leaveRequests.filter(req => {
+        if (req.status !== 'APPROVED') return false;
+        const targetTime = dayjs(dateStr).valueOf();
+        const startTime = dayjs(req.startDate).valueOf();
+        const endTime = dayjs(req.endDate).valueOf();
+        return targetTime >= startTime && targetTime <= endTime;
+      });
+      const currentLeaveChildIds = new Set(approvedLeavesThisDate.map(req => req.childId));
+      setLeaveChildIds(currentLeaveChildIds);
+
+      const newAttendanceMap: Record<number, string> = {};
+      dailyLogs.forEach(log => {
+        newAttendanceMap[log.childId] = log.attendanceStatus;
+      });
+      setAttendanceMap(newAttendanceMap);
+
       let breakfast = 0;
       let lunch = 0;
       let snack = 0;
-      const cancelled: Record<string, { childId: number, childName: string, meals: string[] }> = {};
+      const cancelled: Record<string, { childId: number, childName: string, meals: string[], reason: string }> = {};
+      const overridden: Record<string, { childId: number, childName: string, meals: string[], originalStatus: string }> = {};
+      const pendingCancel: Record<string, { childId: number, childName: string, registeredMeals: string[] }> = {};
 
       registrations.forEach(reg => {
-        if (reg.status === 'REGISTERED') {
+        if (reg.isTeacherOverride) {
+          const key = reg.childId.toString();
+          if (!overridden[key]) {
+            let origStatusText = 'N/A';
+            if (reg.originalStatus === 'CANCELLED_BY_LEAVE') origStatusText = 'Hủy do nghỉ học';
+            else if (reg.originalStatus === 'CANCELLED') origStatusText = 'Phụ huynh cắt';
+            else if (reg.originalStatus === 'REGISTERED' || !reg.originalStatus) origStatusText = 'Đã đăng ký';
+            
+            overridden[key] = {
+              childId: reg.childId,
+              childName: reg.childFullName,
+              meals: [],
+              originalStatus: origStatusText
+            };
+          }
+          if (reg.status === 'REGISTERED') {
+              if (reg.mealType === 'BREAKFAST') overridden[key].meals.push('Sáng');
+              else if (reg.mealType === 'LUNCH') overridden[key].meals.push('Trưa');
+              else if (reg.mealType === 'SNACK') overridden[key].meals.push('Xế');
+              
+              if (reg.mealType === 'BREAKFAST') breakfast++;
+              else if (reg.mealType === 'LUNCH') lunch++;
+              else if (reg.mealType === 'SNACK') snack++;
+          } else if (reg.status === 'CANCELLED') {
+              if (reg.mealType === 'BREAKFAST') overridden[key].meals.push('Sáng');
+              else if (reg.mealType === 'LUNCH') overridden[key].meals.push('Trưa');
+              else if (reg.mealType === 'SNACK') overridden[key].meals.push('Xế');
+
+              if (!cancelled[key]) {
+                cancelled[key] = {
+                  childId: reg.childId,
+                  childName: reg.childFullName,
+                  meals: [],
+                  reason: 'giáo viên hủy'
+                };
+              }
+              if (reg.mealType === 'BREAKFAST') cancelled[key].meals.push('Sáng');
+              else if (reg.mealType === 'LUNCH') cancelled[key].meals.push('Trưa');
+              else if (reg.mealType === 'SNACK') cancelled[key].meals.push('Xế');
+          }
+        } else if (reg.status === 'REGISTERED') {
           if (reg.mealType === 'BREAKFAST') breakfast++;
           else if (reg.mealType === 'LUNCH') lunch++;
           else if (reg.mealType === 'SNACK') snack++;
+          
+          if (currentLeaveChildIds.has(reg.childId)) {
+            const key = reg.childId.toString();
+            if (!pendingCancel[key]) {
+              pendingCancel[key] = {
+                childId: reg.childId,
+                childName: reg.childFullName,
+                registeredMeals: []
+              };
+            }
+            if (reg.mealType === 'BREAKFAST') pendingCancel[key].registeredMeals.push('Sáng');
+            else if (reg.mealType === 'LUNCH') pendingCancel[key].registeredMeals.push('Trưa');
+            else if (reg.mealType === 'SNACK') pendingCancel[key].registeredMeals.push('Xế');
+          }
         } else if (reg.status === 'CANCELLED' || reg.status === 'CANCELLED_BY_LEAVE') {
           const key = reg.childId.toString();
           if (!cancelled[key]) {
             cancelled[key] = {
               childId: reg.childId,
               childName: reg.childFullName,
-              meals: []
+              meals: [],
+              reason: reg.status === 'CANCELLED_BY_LEAVE' ? 'do nghỉ học' : 'phụ huynh cắt'
             };
           }
           if (reg.mealType === 'BREAKFAST') cancelled[key].meals.push('Sáng');
@@ -114,6 +200,8 @@ export default function TeacherMealSummaryScreen() {
 
       const cancelledArray = Object.values(cancelled);
       setCancelledList(cancelledArray);
+      setOverriddenList(Object.values(overridden));
+      setPendingCancelList(Object.values(pendingCancel));
 
       setStats({
         totalBreakfast: breakfast,
@@ -126,6 +214,9 @@ export default function TeacherMealSummaryScreen() {
       console.error('Error fetching meal summary:', error);
       setStats({ totalBreakfast: 0, totalLunch: 0, totalSnack: 0, totalMeals: 0 });
       setCancelledList([]);
+      setOverriddenList([]);
+      setPendingCancelList([]);
+      setAttendanceMap({});
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -137,10 +228,72 @@ export default function TeacherMealSummaryScreen() {
     fetchMealSummary();
   };
 
-  const openOverrideModal = (childId: number, childName: string, cancelledMeals: string[]) => {
+  const handleRestoreOverride = (childId: number, mealsToRestore: string[], originalStatus: string) => {
+    if (originalStatus === 'Đã đăng ký' && leaveChildIds.has(childId)) {
+      Alert.alert('Không thể khôi phục', 'Suất ăn bạn muốn khôi phục thuộc 1 học sinh đang nghỉ học, không thể sử dụng tính năng này.');
+      return;
+    }
+
+    Alert.alert(
+      'Xác nhận khôi phục',
+      'Hệ thống sẽ hủy các suất đăng ký ngoại lệ và khôi phục lại trạng thái cắt cơm ban đầu của bé. Bạn có chắc chắn?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { 
+          text: 'Khôi phục', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
+              
+              const requestMealTypes = mealsToRestore.map(m => {
+                if (m === 'Sáng') return 'BREAKFAST';
+                if (m === 'Trưa') return 'LUNCH';
+                return 'SNACK';
+              });
+
+              await mealRegistrationService.restoreOverrideRegistration({
+                childId,
+                date: dateStr,
+                mealTypes: requestMealTypes,
+                isRegistered: false
+              });
+              
+              Alert.alert('Thành công', 'Đã khôi phục trạng thái gốc');
+              fetchMealSummary();
+            } catch (error: any) {
+              const errorMsg = error.response?.data?.message || error.message || 'Không thể khôi phục';
+              Alert.alert('Lỗi', errorMsg);
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const openOverrideModal = (childId: number, childName: string, targetMeals: string[], mode: 'ADD' | 'CANCEL') => {
+    if (mode === 'ADD') {
+      const attendance = attendanceMap[childId];
+      const isLeave = leaveChildIds.has(childId);
+      
+      const isMarkedAbsent = attendance === 'ABSENT_EXCUSED' || attendance === 'ABSENT_UNEXCUSED';
+      const isMarkedPresent = attendance === 'PRESENT';
+
+      if ((isLeave || isMarkedAbsent) && !isMarkedPresent) {
+        Alert.alert(
+          'Không thể bổ sung',
+          `Bé ${childName} đang được ghi nhận là nghỉ học. Vui lòng điểm danh bé "Có mặt" tại màn hình Nhật ký trước khi bổ sung suất ăn.`
+        );
+        return;
+      }
+    }
+
+    setOverrideMode(mode);
     setOverrideChild({ id: childId, name: childName });
     // Mặc định chọn sẵn những bữa mà bé đã cắt
-    const defaultSelected = cancelledMeals.map(m => {
+    const defaultSelected = targetMeals.map(m => {
       if (m === 'Sáng') return 'BREAKFAST';
       if (m === 'Trưa') return 'LUNCH';
       return 'SNACK';
@@ -172,12 +325,16 @@ export default function TeacherMealSummaryScreen() {
         childId: overrideChild.id,
         date: dateStr,
         mealTypes: overrideMeals,
-        isRegistered: true
+        isRegistered: overrideMode === 'ADD'
       });
-      Alert.alert('Thành công', `Đã đăng ký bổ sung suất ăn cho bé ${overrideChild.name}`);
+      Alert.alert('Thành công', overrideMode === 'ADD' 
+        ? `Đã đăng ký bổ sung suất ăn cho bé ${overrideChild.name}`
+        : `Đã hủy suất ăn cho bé ${overrideChild.name}`
+      );
       fetchMealSummary();
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể đăng ký bổ sung');
+      const errorMsg = error.response?.data?.message || error.message || 'Không thể thao tác';
+      Alert.alert('Lỗi', errorMsg);
       setLoading(false);
     }
   };
@@ -296,7 +453,7 @@ export default function TeacherMealSummaryScreen() {
               {cancelledList.map((item, index) => (
                 <View key={index} style={styles.cancelledItem}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cancelledName}>• {item.childName}</Text>
+                    <Text style={styles.cancelledName}>• {item.childName} <Text style={{fontSize: 13, color: '#64748b', fontWeight: 'normal'}}>({item.reason})</Text></Text>
                     <View style={styles.cancelledMeals}>
                       {item.meals.map((m, idx) => (
                         <View key={idx} style={styles.mealBadge}>
@@ -310,10 +467,77 @@ export default function TeacherMealSummaryScreen() {
                   {dayjs(selectedDate).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD') && (
                     <TouchableOpacity 
                       style={styles.overrideButton}
-                      onPress={() => openOverrideModal(item.childId, item.childName, item.meals)}
+                      onPress={() => openOverrideModal(item.childId, item.childName, item.meals, 'ADD')}
                     >
                       <Ionicons name="add-circle" size={18} color="#fff" />
                       <Text style={styles.overrideButtonText}>Bổ sung</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+
+          {pendingCancelList.length > 0 && (
+            <View style={[styles.cancelledSection, { borderColor: '#fecaca', shadowColor: '#ef4444' }]}>
+              <View style={styles.cancelledHeader}>
+                <Ionicons name="alert-circle" size={24} color="#ef4444" />
+                <Text style={[styles.cancelledTitle, { color: '#ef4444' }]}>Xin nghỉ nhưng chưa cắt cơm ({pendingCancelList.length})</Text>
+              </View>
+              {pendingCancelList.map((item, index) => (
+                <View key={index} style={styles.cancelledItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cancelledName}>• {item.childName}</Text>
+                    <View style={styles.cancelledMeals}>
+                      {item.registeredMeals.map((m, idx) => (
+                        <View key={idx} style={[styles.mealBadge, { backgroundColor: '#fee2e2' }]}>
+                          <Text style={[styles.mealBadgeText, { color: '#b91c1c' }]}>{m}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                  
+                  {dayjs(selectedDate).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD') && (
+                    <TouchableOpacity 
+                      style={[styles.overrideButton, { backgroundColor: '#ef4444' }]}
+                      onPress={() => openOverrideModal(item.childId, item.childName, item.registeredMeals, 'CANCEL')}
+                    >
+                      <Ionicons name="close-circle" size={18} color="#fff" />
+                      <Text style={styles.overrideButtonText}>Hủy suất</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+
+          {overriddenList.length > 0 && (
+            <View style={styles.overriddenSection}>
+              <View style={styles.cancelledHeader}>
+                <Ionicons name="information-circle" size={24} color="#0ea5e9" />
+                <Text style={styles.overriddenTitle}>Danh sách đăng ký ngoại lệ ({overriddenList.length})</Text>
+              </View>
+              {overriddenList.map((item, index) => (
+                <View key={index} style={styles.cancelledItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cancelledName}>• {item.childName}</Text>
+                    <View style={styles.cancelledMeals}>
+                      {item.meals.map((m, idx) => (
+                        <View key={idx} style={styles.overriddenBadge}>
+                          <Text style={styles.overriddenBadgeText}>{m}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={styles.originalStatusText}>📝 Gốc: {item.originalStatus}</Text>
+                  </View>
+                  
+                  {dayjs(selectedDate).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD') && (
+                    <TouchableOpacity 
+                      style={styles.restoreButton}
+                      onPress={() => handleRestoreOverride(item.childId, item.meals, item.originalStatus)}
+                    >
+                      <Ionicons name="refresh" size={16} color="#475569" />
+                      <Text style={styles.restoreButtonText}>Khôi phục</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -354,38 +578,39 @@ export default function TeacherMealSummaryScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.overrideModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Bổ sung suất ăn</Text>
+              <Text style={styles.modalTitle}>{overrideMode === 'ADD' ? 'Bổ sung suất ăn' : 'Hủy suất ăn'}</Text>
               <TouchableOpacity onPress={() => setShowOverrideModal(false)}>
                 <Ionicons name="close" size={24} color="#64748b" />
               </TouchableOpacity>
             </View>
             
             <Text style={styles.overrideSubtitle}>
-              Chọn các bữa ăn cần đăng ký bổ sung cho bé <Text style={{fontWeight: 'bold', color: '#0ea5e9'}}>{overrideChild?.name}</Text>:
+              {overrideMode === 'ADD' ? 'Chọn các bữa ăn cần đăng ký bổ sung cho bé ' : 'Chọn các bữa ăn cần hủy cho bé '}
+              <Text style={{fontWeight: 'bold', color: overrideMode === 'ADD' ? '#0ea5e9' : '#ef4444'}}>{overrideChild?.name}</Text>:
             </Text>
 
             <View style={styles.checkboxContainer}>
               <TouchableOpacity 
-                style={[styles.checkboxItem, overrideMeals.includes('BREAKFAST') && styles.checkboxItemActive]} 
+                style={[styles.checkboxItem, overrideMeals.includes('BREAKFAST') && (overrideMode === 'ADD' ? styles.checkboxItemActive : styles.checkboxItemActiveCancel)]} 
                 onPress={() => toggleOverrideMeal('BREAKFAST')}
               >
-                <Ionicons name={overrideMeals.includes('BREAKFAST') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('BREAKFAST') ? "#0ea5e9" : "#94a3b8"} />
+                <Ionicons name={overrideMeals.includes('BREAKFAST') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('BREAKFAST') ? (overrideMode === 'ADD' ? "#0ea5e9" : "#ef4444") : "#94a3b8"} />
                 <Text style={styles.checkboxText}>Bữa Sáng</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.checkboxItem, overrideMeals.includes('LUNCH') && styles.checkboxItemActive]} 
+                style={[styles.checkboxItem, overrideMeals.includes('LUNCH') && (overrideMode === 'ADD' ? styles.checkboxItemActive : styles.checkboxItemActiveCancel)]} 
                 onPress={() => toggleOverrideMeal('LUNCH')}
               >
-                <Ionicons name={overrideMeals.includes('LUNCH') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('LUNCH') ? "#0ea5e9" : "#94a3b8"} />
+                <Ionicons name={overrideMeals.includes('LUNCH') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('LUNCH') ? (overrideMode === 'ADD' ? "#0ea5e9" : "#ef4444") : "#94a3b8"} />
                 <Text style={styles.checkboxText}>Bữa Trưa</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.checkboxItem, overrideMeals.includes('SNACK') && styles.checkboxItemActive]} 
+                style={[styles.checkboxItem, overrideMeals.includes('SNACK') && (overrideMode === 'ADD' ? styles.checkboxItemActive : styles.checkboxItemActiveCancel)]} 
                 onPress={() => toggleOverrideMeal('SNACK')}
               >
-                <Ionicons name={overrideMeals.includes('SNACK') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('SNACK') ? "#0ea5e9" : "#94a3b8"} />
+                <Ionicons name={overrideMeals.includes('SNACK') ? "checkbox" : "square-outline"} size={24} color={overrideMeals.includes('SNACK') ? (overrideMode === 'ADD' ? "#0ea5e9" : "#ef4444") : "#94a3b8"} />
                 <Text style={styles.checkboxText}>Bữa Xế</Text>
               </TouchableOpacity>
             </View>
@@ -394,8 +619,8 @@ export default function TeacherMealSummaryScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowOverrideModal(false)}>
                 <Text style={styles.cancelBtnText}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={submitOverrideRegistration}>
-                <Text style={styles.confirmBtnText}>Đăng ký</Text>
+              <TouchableOpacity style={[styles.confirmBtn, overrideMode === 'CANCEL' && { backgroundColor: '#ef4444' }]} onPress={submitOverrideRegistration}>
+                <Text style={styles.confirmBtnText}>{overrideMode === 'ADD' ? 'Đăng ký' : 'Xác nhận hủy'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -627,6 +852,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  overriddenSection: {
+    marginTop: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  overriddenTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0ea5e9',
+  },
+  overriddenBadge: {
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  overriddenBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0284c7',
+  },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#cbd5e1'
+  },
+  restoreButtonText: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  originalStatusText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 6,
+    fontStyle: 'italic'
+  },
   overrideModalContent: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -656,6 +932,10 @@ const styles = StyleSheet.create({
   checkboxItemActive: {
     borderColor: '#bae6fd',
     backgroundColor: '#f0f9ff',
+  },
+  checkboxItemActiveCancel: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
   },
   checkboxText: {
     fontSize: 16,

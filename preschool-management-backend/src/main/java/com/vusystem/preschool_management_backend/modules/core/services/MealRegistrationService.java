@@ -20,6 +20,9 @@ public interface MealRegistrationService {
     // cho phép giáo viên/admin đăng ký ngoại lệ vượt qua ràng buộc thời gian
     void overrideDailyRegistration(com.vusystem.preschool_management_backend.modules.core.dto.request.DailyMealRegistrationRequest request);
 
+    // khôi phục suất ăn về trạng thái trước khi bị giáo viên ghi đè
+    void restoreDailyRegistration(com.vusystem.preschool_management_backend.modules.core.dto.request.DailyMealRegistrationRequest request);
+
     List<MealRegistrationResponse> getRegistrationsByClassAndDate(Long classId, LocalDate date);
 
     List<MealRegistrationResponse> getRegistrationsByChildAndDateRange(Long childId, LocalDate startDate, LocalDate endDate);

@@ -38,4 +38,12 @@ public class MealRegistration extends BaseEntity {
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
     private MealRegStatus status = MealRegStatus.REGISTERED;
+
+    @Column(name = "is_teacher_override", nullable = false)
+    @Builder.Default
+    private Boolean isTeacherOverride = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "original_status", length = 20)
+    private MealRegStatus originalStatus;
 }

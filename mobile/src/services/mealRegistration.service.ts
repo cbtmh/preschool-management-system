@@ -23,6 +23,8 @@ export interface MealRegistrationResponse {
   date: string;
   mealType: string;
   status: string;
+  isTeacherOverride?: boolean;
+  originalStatus?: string;
 }
 
 export const mealRegistrationService = {
@@ -36,6 +38,10 @@ export const mealRegistrationService = {
 
   overrideDailyRegistration: async (request: DailyMealRegistrationRequest): Promise<void> => {
     await axiosInstance.post(`/core/meal-registrations/override/daily`, request);
+  },
+
+  restoreOverrideRegistration: async (request: DailyMealRegistrationRequest): Promise<void> => {
+    await axiosInstance.post(`/core/meal-registrations/restore-override/daily`, request);
   },
 
   getRegistrationsByChildAndDateRange: async (childId: number, startDate: string, endDate: string): Promise<MealRegistrationResponse[]> => {

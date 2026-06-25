@@ -7,6 +7,12 @@ import com.vusystem.preschool_management_backend.common.entity.enums.MealType;
 import com.vusystem.preschool_management_backend.common.entity.operation.MealRegistration;
 import com.vusystem.preschool_management_backend.common.entity.user.Child;
 
+import com.vusystem.preschool_management_backend.common.entity.operation.DailyLog;
+import com.vusystem.preschool_management_backend.common.entity.enums.AttendanceStatus;
+import com.vusystem.preschool_management_backend.modules.mobile.repository.DailyLogRepository;
+import com.vusystem.preschool_management_backend.modules.mobile.repository.LeaveRequestRepository;
+import java.util.Optional;
+
 import com.vusystem.preschool_management_backend.modules.core.dto.request.DailyMealRegistrationRequest;
 import com.vusystem.preschool_management_backend.modules.core.dto.request.MonthlyMealRegistrationRequest;
 import com.vusystem.preschool_management_backend.modules.core.dto.response.ChildMonthlyMealStatsResponse;
@@ -47,6 +53,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
     private final SchoolClassRepository schoolClassRepository;
     private final SecurityService securityService;
     private final NotificationService notificationService;
+    private final DailyLogRepository dailyLogRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
 
 
@@ -275,6 +283,19 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
             throw new RuntimeException("Không thể đăng ký suất ăn cho ngày nghỉ cuối tuần.");
         }
 
+        if (request.getIsRegistered()) {
+            boolean isLeave = leaveRequestRepository.existsApprovedRequest(request.getChildId(), applyDate, applyDate);
+            Optional<DailyLog> dailyLog = dailyLogRepository.findByChildIdAndDate(request.getChildId(), applyDate);
+            boolean isMarkedAbsent = dailyLog.isPresent() && 
+                (dailyLog.get().getAttendanceStatus() == AttendanceStatus.ABSENT_EXCUSED || 
+                 dailyLog.get().getAttendanceStatus() == AttendanceStatus.ABSENT_UNEXCUSED);
+            boolean isMarkedPresent = dailyLog.isPresent() && dailyLog.get().getAttendanceStatus() == AttendanceStatus.PRESENT;
+
+            if ((isLeave || isMarkedAbsent) && !isMarkedPresent) {
+                throw new RuntimeException("Bé đang được ghi nhận là nghỉ học. Vui lòng điểm danh 'Có mặt' trước khi bổ sung suất ăn.");
+            }
+        }
+
         List<MealType> requestMealTypes = request.getMealTypes();
         if (requestMealTypes == null) {
             requestMealTypes = new ArrayList<>();
@@ -307,6 +328,10 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
 
             if (existing != null) {
                 if (existing.getStatus() != statusToSet) {
+                    if (!Boolean.TRUE.equals(existing.getIsTeacherOverride())) {
+                        existing.setOriginalStatus(existing.getStatus());
+                    }
+                    existing.setIsTeacherOverride(true);
                     existing.setStatus(statusToSet);
                     recordsToSave.add(existing);
                 }
@@ -316,6 +341,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                         .date(applyDate)
                         .mealType(mealType)
                         .status(statusToSet)
+                        .isTeacherOverride(true)
+                        .originalStatus(null)
                         .build();
                 recordsToSave.add(newReg);
             }
@@ -329,13 +356,16 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 Long parentUserId = child.getParent().getUser().getId();
                 Long teacherId = securityService.getCurrentUser().getId();
                 
-                String statusStr = request.getIsRegistered() ? "đăng ký bổ sung" : "hủy bổ sung";
+                java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                String dateStr = applyDate.format(formatter);
+                
+                String statusStr = request.getIsRegistered() ? "bổ sung" : "hủy";
                 String mealsStr = requestMealTypes.stream()
-                        .map(m -> m == MealType.BREAKFAST ? "Sáng" : (m == MealType.LUNCH ? "Trưa" : "Xế"))
+                        .map(m -> m == MealType.BREAKFAST ? "sáng" : (m == MealType.LUNCH ? "trưa" : "xế"))
                         .collect(Collectors.joining(", "));
                 
-                String title = "\uD83C\uDF7D\uFE0F " + (request.getIsRegistered() ? "Bổ sung suất ăn" : "Hủy suất ăn ngoại lệ");
-                String content = "Giáo viên đã " + statusStr + " suất ăn (" + mealsStr + ") cho bé " + child.getFullName() + " trong ngày hôm nay. Chúc bé một ngày vui vẻ!";
+                String title = "\uD83C\uDF7D\uFE0F " + (request.getIsRegistered() ? "Bổ sung suất ăn ngày " : "Hủy suất ăn ngày ") + dateStr;
+                String content = "Giáo viên đã " + statusStr + " suất ăn (" + mealsStr + ") cho bé " + child.getFullName() + " trong hôm nay. Chúc bé 1 ngày vui vẻ";
                 
                 try {
                     // Tránh lỗi transaction bị đánh dấu rollback-only nếu notification bị lỗi
@@ -345,6 +375,60 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                     log.error("Lỗi khi gửi thông báo suất ăn ngoại lệ cho phụ huynh ID: {}", parentUserId, e);
                 }
             }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void restoreDailyRegistration(DailyMealRegistrationRequest request) {
+        securityService.verifyTeacherTeachesChild(request.getChildId());
+        
+        Child child = childRepository.findById(request.getChildId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy học sinh với ID: " + request.getChildId()));
+
+        LocalDate applyDate = request.getDate();
+        
+        List<MealType> requestMealTypes = request.getMealTypes();
+        if (requestMealTypes == null || requestMealTypes.isEmpty()) {
+            throw new RuntimeException("Suất ăn bạn muốn khôi phục thuộc 1 học sinh đang nghỉ học, không thể sử dụng tính năng này");
+        }
+
+        List<MealRegistration> existingRegistrations = mealRegistrationRepository
+                .findByChildIdAndDateBetweenOrderByDateAsc(request.getChildId(), applyDate, applyDate);
+
+        List<MealRegistration> recordsToSave = new ArrayList<>();
+        List<MealRegistration> recordsToDelete = new ArrayList<>();
+
+        for (MealType mealType : requestMealTypes) {
+            MealRegistration existing = existingRegistrations.stream()
+                    .filter(r -> r.getMealType() == mealType && Boolean.TRUE.equals(r.getIsTeacherOverride()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                if (existing.getOriginalStatus() != null) {
+                    if (existing.getOriginalStatus() == MealRegStatus.REGISTERED) {
+                        boolean isLeave = leaveRequestRepository.existsApprovedRequest(request.getChildId(), applyDate, applyDate);
+                        if (isLeave) {
+                            throw new RuntimeException("Suất ăn bạn muốn khôi phục thuộc 1 học sinh đang nghỉ học, không thể sử dụng tính năng này.");
+                        }
+                    }
+
+                    existing.setStatus(existing.getOriginalStatus());
+                    existing.setIsTeacherOverride(false);
+                    existing.setOriginalStatus(null);
+                    recordsToSave.add(existing);
+                } else {
+                    recordsToDelete.add(existing);
+                }
+            }
+        }
+
+        if (!recordsToSave.isEmpty()) {
+            mealRegistrationRepository.saveAll(recordsToSave);
+        }
+        if (!recordsToDelete.isEmpty()) {
+            mealRegistrationRepository.deleteAll(recordsToDelete);
         }
     }
 
@@ -366,6 +450,8 @@ public class MealRegistrationServiceImpl implements MealRegistrationService {
                 .date(entity.getDate())
                 .mealType(entity.getMealType())
                 .status(entity.getStatus())
+                .isTeacherOverride(entity.getIsTeacherOverride())
+                .originalStatus(entity.getOriginalStatus())
                 .build();
     }
 

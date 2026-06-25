@@ -206,9 +206,23 @@ public class DailyLogServiceImpl implements DailyLogService {
         dailyLogRepository.saveAll(logsToSave);
 
         // delay gửi thông báo sau khi save để lấy được id thực của entity
-        for (Runnable task : notificationsToSend) {
-            task.run();
-        }
+        // Gửi bất đồng bộ sau khi transaction đã commit để tránh timeout frontend khi điểm danh lớp đông
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    java.util.concurrent.CompletableFuture.runAsync(() -> {
+                        for (Runnable task : notificationsToSend) {
+                            try {
+                                task.run();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            }
+        );
     }
 
     // --- Helper Method ---
