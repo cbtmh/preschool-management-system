@@ -7,7 +7,7 @@ Dự án này là hệ thống quản lý trường mầm non toàn diện, bao 
 
 ---
 
-## 🛠 Yêu cầu hệ thống (Prerequisites)
+## Yêu cầu hệ thống (Prerequisites)
 
 Để chạy dự án này trên máy tính của bạn (local), bạn cần cài đặt sẵn:
 - **Java 17** (dành cho Backend)
@@ -17,7 +17,7 @@ Dự án này là hệ thống quản lý trường mầm non toàn diện, bao 
 
 ---
 
-## 🚀 Hướng dẫn cài đặt và chạy dự án
+## Hướng dẫn cài đặt và chạy dự án
 
 ### 1. Cấu hình môi trường (.env)
 Ở thư mục gốc của dự án, bạn sẽ thấy file `.env`. 
@@ -54,7 +54,7 @@ mvnw.cmd spring-boot:run
 ```bash
 ./mvnw spring-boot:run
 ```
-👉 Backend sẽ chạy ở địa chỉ: `http://localhost:8080`
+- Backend sẽ chạy ở địa chỉ: `http://localhost:8080`
 
 ---
 
@@ -74,7 +74,7 @@ npm install
 ```bash
 npm run dev
 ```
-👉 Giao diện Web sẽ chạy ở địa chỉ: `http://localhost:5173` (hoặc cổng mà Terminal hiển thị).
+- Giao diện Web sẽ chạy ở địa chỉ: `http://localhost:5173` (hoặc cổng mà Terminal hiển thị).
 
 ---
 
@@ -99,7 +99,7 @@ npm start
 
 ---
 
-## 📌 Tóm tắt thông tin các port mặc định
+## Tóm tắt thông tin các port mặc định
 - **Backend API**: `http://localhost:8080`
 - **Frontend Web**: `http://localhost:5173`
 - **Database (PostgreSQL)**: Cổng `5454` (nếu chạy qua docker-compose) hoặc `5432` (mặc định của DB).
