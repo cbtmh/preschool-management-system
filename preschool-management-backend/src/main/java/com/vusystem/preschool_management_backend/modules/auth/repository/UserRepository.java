@@ -21,4 +21,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByRole(com.vusystem.preschool_management_backend.common.entity.enums.Role role);
     
     List<User> findByRoleIn(List<com.vusystem.preschool_management_backend.common.entity.enums.Role> roles);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.deviceToken = null WHERE u.deviceToken = :token AND u.id != :userId")
+    void clearDeviceTokenFromOtherUsers(@org.springframework.data.repository.query.Param("token") String token, @org.springframework.data.repository.query.Param("userId") Long userId);
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE User u SET u.deviceToken = null WHERE u.deviceToken = :token")
+    void removeDeviceToken(@org.springframework.data.repository.query.Param("token") String token);
 }

@@ -132,6 +132,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void updatePushToken(Long userId, String token) {
+        // Xóa token này khỏi tất cả các user khác đang sở hữu (ngăn chặn Stale Push Token / Cross-Account Token Contamination)
+        userRepository.clearDeviceTokenFromOtherUsers(token, userId);
+
         User user = findById(userId);
         user.setDeviceToken(token);
         userRepository.save(user);

@@ -13,15 +13,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vusystem.preschool_management_backend.modules.auth.repository.UserRepository;
+
 @Service
 @Slf4j
 public class ExpoPushService {
 
     private static final String EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
     private final RestTemplate restTemplate;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
-    public ExpoPushService() {
+    public ExpoPushService(UserRepository userRepository) {
         this.restTemplate = new RestTemplate();
+        this.userRepository = userRepository;
+        this.objectMapper = new ObjectMapper();
     }
 
     public boolean sendPushNotifications(List<String> pushTokens, String title, String body, Map<String, Object> data) {
@@ -58,7 +66,35 @@ public class ExpoPushService {
 
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(EXPO_PUSH_URL, request, String.class);
-            log.info("Sent push notifications successfully. Response: {}", response.getBody());
+            String responseBody = response.getBody();
+            log.info("Sent push notifications successfully. Response: {}", responseBody);
+            
+            if (responseBody != null) {
+                try {
+                    JsonNode root = objectMapper.readTree(responseBody);
+                    JsonNode dataNode = root.path("data");
+                    if (dataNode.isArray()) {
+                        for (int i = 0; i < dataNode.size(); i++) {
+                            JsonNode resultNode = dataNode.get(i);
+                            if ("error".equals(resultNode.path("status").asText())) {
+                                JsonNode detailsNode = resultNode.path("details");
+                                if ("DeviceNotRegistered".equals(detailsNode.path("error").asText())) {
+                                    if (i < messages.size()) {
+                                        String tokenToRemove = (String) messages.get(i).get("to");
+                                        if (tokenToRemove != null) {
+                                            userRepository.removeDeviceToken(tokenToRemove);
+                                            log.info("Removed stale push token: {}", tokenToRemove);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception parseEx) {
+                    log.error("Failed to parse Expo response or clean stale tokens: {}", parseEx.getMessage());
+                }
+            }
+            
             return true;
         } catch (Exception e) {
             log.error("Failed to send Expo push notifications: {}", e.getMessage());

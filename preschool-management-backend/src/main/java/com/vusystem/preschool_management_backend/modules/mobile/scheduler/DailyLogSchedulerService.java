@@ -37,7 +37,7 @@ public class DailyLogSchedulerService {
     /**
      * Chạy lúc 17:30 mỗi ngày: Nhắc nhở giáo viên nếu còn học sinh chưa được check-out
      */
-    @Scheduled(cron = "0 30 17 * * ?")
+    @Scheduled(cron = "0 30 17 * * ?", zone = "Asia/Ho_Chi_Minh")
     @Transactional(readOnly = true)
     public void remindTeachersForCheckout() {
         log.info("Bắt đầu tiến trình: Nhắc nhở giáo viên điểm danh ra về lúc 17:30");
@@ -82,7 +82,7 @@ public class DailyLogSchedulerService {
     /**
      * Chạy lúc 19:00 mỗi ngày: Tự động check-out cho học sinh chưa được check-out
      */
-    @Scheduled(cron = "0 0 19 * * ?")
+    @Scheduled(cron = "0 0 19 * * ?", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void autoCheckoutPendingLogs() {
         log.info("Bắt đầu tiến trình: Tự động check-out học sinh lúc 19:00");

@@ -109,28 +109,53 @@ public class NotificationService {
             notificationRecipientRepository.saveAll(notificationRecipients);
         }
 
-        // gửi push notification
         List<String> tokens = recipients.stream()
                 .map(User::getDeviceToken)
                 .filter(token -> token != null && !token.isEmpty())
                 .collect(Collectors.toList());
 
+        List<User> finalRecipients = new ArrayList<>(recipients);
+        Long notificationId = notification.getId();
+        String title = notification.getTitle();
+        String content = notification.getContent();
+        String refType = notification.getReferenceType();
+        Long refId = notification.getReferenceId();
+
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                                executePushAndSms(tokens, finalRecipients, notificationId, title, content, refType, refId);
+                            });
+                        }
+                    }
+            );
+        } else {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                executePushAndSms(tokens, finalRecipients, notificationId, title, content, refType, refId);
+            });
+        }
+    }
+
+    private void executePushAndSms(List<String> tokens, List<User> finalRecipients, Long notificationId, String title, String content, String refType, Long refId) {
         boolean pushSuccess = false;
         if (!tokens.isEmpty()) {
             Map<String, Object> data = new HashMap<>();
-            data.put("notificationId", notification.getId().toString());
-            if (notification.getReferenceType() != null) {
-                data.put("referenceType", notification.getReferenceType());
-                data.put("referenceId", notification.getReferenceId() != null ? notification.getReferenceId().toString() : null);
+            data.put("notificationId", notificationId.toString());
+            if (refType != null) {
+                data.put("referenceType", refType);
+                data.put("referenceId", refId != null ? refId.toString() : null);
             }
-            pushSuccess = expoPushService.sendPushNotifications(tokens, notification.getTitle(), notification.getContent(), data);
+            pushSuccess = expoPushService.sendPushNotifications(tokens, title, content, data);
         }
 
         // dự phòng gửi sms nếu push notification thất bại
-        for (User user : recipients) {
+        for (User user : finalRecipients) {
             boolean hasToken = user.getDeviceToken() != null && !user.getDeviceToken().isEmpty();
             if (!hasToken || !pushSuccess) {
-                twilioSmsService.sendSms(user.getUsername(), "[Cảnh báo] " + notification.getTitle() + ": " + notification.getContent());
+                twilioSmsService.sendSms(user.getUsername(), "[Cảnh báo] " + title + ": " + content);
             }
         }
     }
@@ -171,24 +196,45 @@ public class NotificationService {
                 .build();
         notificationRecipientRepository.save(notificationRecipient);
 
-        // gửi push notification
+        Long notificationId = notification.getId();
+        String token = recipient.getDeviceToken();
+        String username = recipient.getUsername();
+
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                                executeSinglePushAndSms(token, username, notificationId, title, content, referenceType, referenceId);
+                            });
+                        }
+                    }
+            );
+        } else {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                executeSinglePushAndSms(token, username, notificationId, title, content, referenceType, referenceId);
+            });
+        }
+    }
+
+    private void executeSinglePushAndSms(String token, String username, Long notificationId, String title, String content, String referenceType, Long referenceId) {
         boolean pushSuccess = false;
-        if (recipient.getDeviceToken() != null && !recipient.getDeviceToken().isEmpty()) {
+        if (token != null && !token.isEmpty()) {
             Map<String, Object> data = new HashMap<>();
-            data.put("notificationId", notification.getId().toString());
+            data.put("notificationId", notificationId.toString());
             if (referenceType != null) {
                 data.put("referenceType", referenceType);
                 data.put("referenceId", referenceId != null ? referenceId.toString() : null);
             }
-            pushSuccess = expoPushService.sendPushNotifications(List.of(recipient.getDeviceToken()), title, content, data);
+            pushSuccess = expoPushService.sendPushNotifications(List.of(token), title, content, data);
         }
 
         // dự phòng gửi sms nếu push notification thất bại
-        if (recipient.getDeviceToken() == null || recipient.getDeviceToken().isEmpty() || !pushSuccess) {
-            twilioSmsService.sendSms(recipient.getUsername(), "[Cảnh báo] " + title + ": " + content);
+        if (token == null || token.isEmpty() || !pushSuccess) {
+            twilioSmsService.sendSms(username, "[Cảnh báo] " + title + ": " + content);
         }
     }
-
 
     @Transactional(readOnly = true)
     public Page<AdminNotificationResponse> getSentNotifications(Pageable pageable) {

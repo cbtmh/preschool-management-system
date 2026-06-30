@@ -182,21 +182,31 @@ public class DailyLogServiceImpl implements DailyLogService {
             final String checkInStr = item.getCheckInTime() != null ? item.getCheckInTime().toString() : "";
             final String checkOutStr = item.getCheckOutTime() != null ? item.getCheckOutTime().toString() : "";
 
-            if ((notifyCheckIn || notifyCheckOut) && date.isEqual(today)) {
+            // Trích xuất ID phụ huynh và tên học sinh ĐỒNG BỘ trong transaction hiện tại
+            // Tránh lỗi LazyInitializationException khi truy cập c.getParent() ở luồng khác
+            Long pUserId = null;
+            String cName = null;
+            Child c = dailyLog.getChild();
+            if (c != null) {
+                cName = c.getFullName();
+                if (c.getParent() != null && c.getParent().getUser() != null) {
+                    pUserId = c.getParent().getUser().getId();
+                }
+            }
+            final Long finalParentUserId = pUserId;
+            final String finalChildName = cName;
+
+            if ((notifyCheckIn || notifyCheckOut) && date.isEqual(today) && finalParentUserId != null) {
                 notificationsToSend.add(() -> {
-                    Child c = logRef.getChild();
-                    if (c != null && c.getParent() != null && c.getParent().getUser() != null) {
-                        Long parentUserId = c.getParent().getUser().getId();
-                        if (notifyCheckIn) {
-                            String title = "Thông báo điểm danh: VÀO LỚP";
-                            String content = "Bé " + c.getFullName() + " đã có mặt tại lớp lúc " + checkInStr + ".";
-                            notificationService.sendNotificationToUserWithRef(title, content, NotificationType.INTERACTION, senderId, parentUserId, "DAILY_LOG", logRef.getId());
-                        }
-                        if (notifyCheckOut) {
-                            String title = "Thông báo điểm danh: RA VỀ";
-                            String content = "Bé " + c.getFullName() + " đã rời lớp lúc " + checkOutStr + ".";
-                            notificationService.sendNotificationToUserWithRef(title, content, NotificationType.INTERACTION, senderId, parentUserId, "DAILY_LOG", logRef.getId());
-                        }
+                    if (notifyCheckIn) {
+                        String title = "Thông báo điểm danh: VÀO LỚP";
+                        String content = "Bé " + finalChildName + " đã có mặt tại lớp lúc " + checkInStr + ".";
+                        notificationService.sendNotificationToUserWithRef(title, content, NotificationType.INTERACTION, senderId, finalParentUserId, "DAILY_LOG", logRef.getId());
+                    }
+                    if (notifyCheckOut) {
+                        String title = "Thông báo điểm danh: RA VỀ";
+                        String content = "Bé " + finalChildName + " đã rời lớp lúc " + checkOutStr + ".";
+                        notificationService.sendNotificationToUserWithRef(title, content, NotificationType.INTERACTION, senderId, finalParentUserId, "DAILY_LOG", logRef.getId());
                     }
                 });
             }
