@@ -168,7 +168,6 @@ const Meals = () => {
       <Tabs defaultValue="menu" className="w-full space-y-4">
         <TabsList className="grid w-full md:w-[400px] grid-cols-2">
           <TabsTrigger value="menu">Quản lý Thực đơn</TabsTrigger>
-          <TabsTrigger value="stats">Thống kê Nhà bếp</TabsTrigger>
         </TabsList>
 
         {/* TAB 1: MENU MANAGEMENT */}
@@ -431,119 +430,6 @@ const Meals = () => {
           )}
         </TabsContent>
 
-        {/* TAB 2: STATISTICS */}
-        <TabsContent value="stats" className="space-y-6 pt-4">
-          <div className="flex items-center space-x-2">
-            <span className="font-medium text-sm text-muted-foreground">Chọn khoảng thời gian:</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="stat-date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[300px] justify-start text-left font-normal",
-                    !statDateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {statDateRange?.from ? (
-                    statDateRange.to ? (
-                      <>
-                        {format(statDateRange.from, "dd/MM/yyyy")} -{" "}
-                        {format(statDateRange.to, "dd/MM/yyyy")}
-                      </>
-                    ) : (
-                      format(statDateRange.from, "dd/MM/yyyy")
-                    )
-                  ) : (
-                    <span>Chọn khoảng thời gian</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="range"
-                  defaultMonth={statDateRange?.from}
-                  selected={{ from: statDateRange.from, to: statDateRange.to }}
-                  onSelect={(range: any) => {
-                    if (range?.from && range?.to) {
-                      setStatDateRange({ from: range.from, to: range.to });
-                    } else if (range?.from) {
-                      setStatDateRange({ from: range.from, to: range.from });
-                    }
-                  }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {isStatLoading ? (
-            <div className="text-center py-10">Đang tải dữ liệu thống kê...</div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-orange-800">
-                    Tổng Sáng
-                  </CardTitle>
-                  <Coffee className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-orange-900">{stats.totalBreakfast}</div>
-                  <p className="text-xs text-orange-700 mt-1">
-                    suất ăn chuẩn bị
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-blue-800">
-                    Tổng Trưa
-                  </CardTitle>
-                  <Utensils className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-blue-900">{stats.totalLunch}</div>
-                  <p className="text-xs text-blue-700 mt-1">
-                    suất ăn chuẩn bị
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-purple-800">
-                    Tổng Xế
-                  </CardTitle>
-                  <Apple className="h-4 w-4 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold text-purple-900">{stats.totalSnack}</div>
-                  <p className="text-xs text-purple-700 mt-1">
-                    suất ăn chuẩn bị
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm border-2">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-bold text-green-800">
-                    Tổng Suất
-                  </CardTitle>
-                  <Users className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-black text-green-900">{stats.totalMeals}</div>
-                  <p className="text-xs font-medium text-green-700 mt-1">
-                    tất cả các bữa trong ngày
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
       </Tabs>
     </div>
   );
